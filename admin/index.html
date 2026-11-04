@@ -319,6 +319,11 @@ const $ = (id) => document.getElementById(id);
 const BASE_URL = "https://mamao159.github.io/vota3";
 let currentElection = null;
 let participantsCache = [];
+
+let realtimeChannel = null;
+let realtimeElectionId = null;
+let realtimeTimer = null;
+let pendingRealtimeUpdates = new Set();
 let autoRefreshBusy = false;
 let isLoggedIn = false;
 
