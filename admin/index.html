@@ -697,8 +697,9 @@ $("resultsBtn").addEventListener("click", async () => {
       round: Number($("resultRound").value)
     });
 
-    const container = $("results");
-    container.innerHTML = "";
+   const container = $("results");
+container.dataset.round = $("resultRound").value;
+container.innerHTML = "";
 
     const heading = document.createElement("p");
     heading.className = "muted";
