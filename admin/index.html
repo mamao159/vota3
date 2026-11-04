@@ -730,6 +730,7 @@ $("password").addEventListener("keydown", (event) => {
 });
 
 $("logoutBtn").addEventListener("click", async () => {
+  await stopRealtimeSubscription();
   await supabase.auth.signOut();
   location.reload();
 });
