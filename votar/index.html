@@ -4,106 +4,287 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#10172a">
   <title>Vota3 | Votação</title>
+
   <style>
     * { box-sizing: border-box; }
+
     body {
       margin: 0;
+      min-height: 100vh;
       padding: 24px 16px;
       font-family: Arial, sans-serif;
-      background: #f1f5f9;
-      color: #172033;
+      background:
+        radial-gradient(circle at top, #263b68 0, #10172a 48%, #080d19 100%);
+      color: #f8fafc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
+
     .container {
-      max-width: 520px;
-      margin: 35px auto;
-      background: white;
-      padding: 28px;
-      border-radius: 16px;
-      box-shadow: 0 5px 25px #00000012;
+      width: 100%;
+      max-width: 500px;
+      padding: 30px;
+      border: 1px solid #334155;
+      border-radius: 20px;
+      background: #172238;
+      box-shadow: 0 20px 60px #0006;
     }
-    h1 { text-align: center; margin-top: 0; }
-    .sub { text-align: center; color: #64748b; margin-bottom: 25px; }
-    label { display: block; font-weight: bold; margin: 16px 0 7px; }
+
+    .brand {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .logo {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 58px;
+      height: 58px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #2563eb, #7c3aed);
+      font-size: 25px;
+      font-weight: 900;
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 29px;
+      letter-spacing: -1px;
+    }
+
+    .sub {
+      color: #94a3b8;
+      margin: 8px 0 0;
+      font-size: 14px;
+    }
+
+    .election-card {
+      background: #202f49;
+      border: 1px solid #334966;
+      border-radius: 12px;
+      padding: 15px;
+      margin-bottom: 22px;
+      text-align: center;
+    }
+
+    .election-label {
+      color: #94a3b8;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      font-weight: bold;
+    }
+
+    #electionName {
+      margin: 7px 0 0;
+      font-size: 18px;
+    }
+
+    label {
+      display: block;
+      font-weight: bold;
+      margin: 16px 0 8px;
+      font-size: 14px;
+    }
+
     input {
       width: 100%;
-      padding: 13px;
-      border: 1px solid #cbd5e1;
-      border-radius: 8px;
-      font-size: 16px;
+      padding: 16px;
+      border: 1px solid #475569;
+      border-radius: 10px;
+      background: #0f172a;
+      color: white;
+      font-size: 23px;
+      text-align: center;
+      letter-spacing: 8px;
+      text-transform: uppercase;
+      outline: none;
     }
+
+    input:focus {
+      border-color: #60a5fa;
+      box-shadow: 0 0 0 3px #3b82f633;
+    }
+
     button {
       width: 100%;
-      padding: 14px;
+      padding: 15px;
       border: 0;
-      border-radius: 8px;
-      background: #174ea6;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #2563eb, #4f46e5);
       color: white;
-      font-size: 16px;
+      font-size: 15px;
       font-weight: bold;
       cursor: pointer;
       margin-top: 18px;
+      transition: .2s;
     }
-    button:disabled { opacity: .5; cursor: not-allowed; }
+
+    button:hover:not(:disabled) {
+      filter: brightness(1.15);
+      transform: translateY(-1px);
+    }
+
+    button:disabled {
+      opacity: .5;
+      cursor: not-allowed;
+    }
+
     .candidate {
       display: flex;
       align-items: center;
-      gap: 12px;
-      padding: 14px;
+      gap: 13px;
+      padding: 15px;
       margin-top: 10px;
-      border: 1px solid #dbe2ea;
-      border-radius: 9px;
+      border: 1px solid #334155;
+      border-radius: 11px;
+      background: #202f49;
       cursor: pointer;
+      transition: .2s;
     }
-    .candidate input { width: 19px; height: 19px; }
-    .candidate label { margin: 0; cursor: pointer; flex: 1; }
+
+    .candidate:hover {
+      border-color: #60a5fa;
+      background: #263b5c;
+    }
+
+    .candidate.selected {
+      border-color: #60a5fa;
+      background: #1e3a5f;
+    }
+
+    .candidate input {
+      width: 19px;
+      height: 19px;
+      margin: 0;
+      accent-color: #3b82f6;
+      flex-shrink: 0;
+    }
+
+    .candidate label {
+      margin: 0;
+      cursor: pointer;
+      flex: 1;
+      font-size: 15px;
+      letter-spacing: normal;
+      text-align: left;
+    }
+
     #message {
       margin-top: 18px;
-      padding: 12px;
-      border-radius: 8px;
+      padding: 13px;
+      border-radius: 9px;
       display: none;
       line-height: 1.5;
+      font-size: 14px;
     }
-    .error { display: block !important; background: #fee2e2; color: #991b1b; }
-    .success { display: block !important; background: #dcfce7; color: #166534; }
-    #votingArea { display: none; margin-top: 25px; }
+
+    .error {
+      display: block !important;
+      background: #451e2a;
+      color: #fecaca;
+      border: 1px solid #7f1d1d;
+    }
+
+    .success {
+      display: block !important;
+      background: #123b31;
+      color: #bbf7d0;
+      border: 1px solid #166534;
+    }
+
+    #votingArea {
+      display: none;
+      margin-top: 24px;
+    }
+
     .round {
       text-align: center;
       font-weight: bold;
-      background: #eff6ff;
-      padding: 12px;
-      border-radius: 8px;
-      margin: 15px 0;
+      color: #bfdbfe;
+      background: #1e3a5f;
+      padding: 13px;
+      border-radius: 9px;
+      margin: 15px 0 22px;
+      font-size: 13px;
+      letter-spacing: 1px;
+    }
+
+    .section-title {
+      font-size: 15px;
+      margin-bottom: 12px;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 26px;
+      color: #64748b;
+      font-size: 11px;
+    }
+
+    @media (max-width: 420px) {
+      .container { padding: 23px 19px; }
     }
   </style>
 </head>
+
 <body>
   <main class="container">
-    <h1>Vota3</h1>
-    <p class="sub">Sistema de votação</p>
+
+    <header class="brand">
+      <div class="logo">V3</div>
+      <h1>Vota3</h1>
+      <p class="sub">Sistema de votação</p>
+    </header>
+
+    <div class="election-card">
+      <div class="election-label">Eleição</div>
+      <h2 id="electionName">Carregando eleição...</h2>
+    </div>
 
     <form id="accessForm">
-      <label for="slug">Identificador da eleição</label>
-      <input id="slug" required placeholder="Ex.: eleicao-2026">
-
       <label for="credential">Sua credencial de votação</label>
-      <input id="credential" required autocomplete="off"
-        placeholder="Digite sua credencial">
 
-      <button type="submit" id="accessButton">Acessar votação</button>
+      <input
+        id="credential"
+        required
+        autocomplete="off"
+        maxlength="3"
+        minlength="3"
+        placeholder="ABC"
+        aria-label="Credencial de votação"
+      >
+
+      <button type="submit" id="accessButton">
+        Acessar votação
+      </button>
     </form>
 
     <section id="votingArea">
-      <h2 id="electionName"></h2>
       <div class="round" id="roundInfo"></div>
 
-      <p><strong>Escolha um candidato:</strong></p>
+      <p class="section-title">
+        <strong>Escolha seu candidato:</strong>
+      </p>
+
       <div id="candidates"></div>
 
-      <button id="voteButton">Confirmar meu voto</button>
+      <button id="voteButton">
+        Confirmar meu voto
+      </button>
     </section>
 
     <div id="message" role="status"></div>
+
+    <footer class="footer">
+      Vota3 · Sistema de votação
+    </footer>
+
   </main>
 
   <script type="module">
@@ -117,10 +298,14 @@
     const votingArea = document.getElementById("votingArea");
     const candidatesArea = document.getElementById("candidates");
     const voteButton = document.getElementById("voteButton");
+    const credentialInput = document.getElementById("credential");
     const message = document.getElementById("message");
 
+    // Identifica a eleição pelo link.
+    const params = new URLSearchParams(window.location.search);
+    const electionSlug = (params.get("e") || "").trim().toLowerCase();
+
     let credential = "";
-    let electionSlug = "";
     let selectedCandidate = null;
 
     function showMessage(text, type = "error") {
@@ -142,20 +327,74 @@
       const result = await response.json();
 
       if (!response.ok || result.error) {
-        throw new Error(result.error || "Não foi possível completar a solicitação.");
+        throw new Error(
+          result.error || "Não foi possível completar a solicitação."
+        );
       }
 
       return result;
     }
 
+    // Consulta os dados públicos da eleição.
+    async function loadElection() {
+      if (!electionSlug) {
+        document.getElementById("electionName").textContent =
+          "Eleição não identificada";
+
+        accessForm.style.display = "none";
+
+        showMessage(
+          "Este link de votação está incompleto. Solicite o link correto ao administrador."
+        );
+
+        return;
+      }
+
+      try {
+        const result = await api("public_election", {
+          slug: electionSlug
+        });
+
+        document.getElementById("electionName").textContent =
+          result.election.name;
+
+        if (
+          !result.election.status ||
+          !result.election.status.startsWith("round_")
+        ) {
+          accessForm.style.display = "none";
+          showMessage("A votação não está aberta neste momento.");
+          return;
+        }
+
+      } catch (error) {
+        document.getElementById("electionName").textContent =
+          "Não foi possível carregar";
+
+        accessForm.style.display = "none";
+        showMessage(error.message);
+      }
+    }
+
+    credentialInput.addEventListener("input", () => {
+      credentialInput.value = credentialInput.value
+        .toUpperCase()
+        .replace(/[^ABCDEFGHJKLMNPQRSTUVWXYZ23456789]/g, "")
+        .slice(0, 3);
+    });
+
     accessForm.addEventListener("submit", async (event) => {
       event.preventDefault();
 
-      electionSlug = document.getElementById("slug").value.trim().toLowerCase();
-      credential = document.getElementById("credential").value.trim();
+      credential = credentialInput.value.trim().toUpperCase();
 
-      if (!electionSlug || !credential) {
-        showMessage("Informe a eleição e sua credencial.");
+      if (!electionSlug) {
+        showMessage("Eleição não identificada.");
+        return;
+      }
+
+      if (!/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{3}$/.test(credential)) {
+        showMessage("Digite uma credencial válida de três caracteres.");
         return;
       }
 
@@ -167,6 +406,10 @@
         const result = await api("public_election", {
           slug: electionSlug
         });
+
+        if (!result.election.status.startsWith("round_")) {
+          throw new Error("A votação não está aberta neste momento.");
+        }
 
         document.getElementById("electionName").textContent =
           result.election.name;
@@ -191,18 +434,27 @@
           radio.value = candidate.id;
           radio.id = `candidate-${candidate.id}`;
 
-          radio.addEventListener("change", () => {
-            selectedCandidate = candidate.id;
-          });
-
           const label = document.createElement("label");
           label.htmlFor = radio.id;
           label.textContent = candidate.name;
 
-          item.append(radio, label);
-          item.addEventListener("click", () => {
-            radio.checked = true;
+          radio.addEventListener("change", () => {
             selectedCandidate = candidate.id;
+
+            document.querySelectorAll(".candidate").forEach((element) => {
+              element.classList.remove("selected");
+            });
+
+            item.classList.add("selected");
+          });
+
+          item.append(radio, label);
+
+          item.addEventListener("click", (clickEvent) => {
+            if (clickEvent.target !== radio) {
+              radio.checked = true;
+              radio.dispatchEvent(new Event("change"));
+            }
           });
 
           candidatesArea.appendChild(item);
@@ -210,7 +462,11 @@
 
         accessForm.style.display = "none";
         votingArea.style.display = "block";
-        showMessage("Eleição carregada. Escolha seu candidato.", "success");
+
+        showMessage(
+          "Eleição carregada. Escolha seu candidato.",
+          "success"
+        );
 
       } catch (error) {
         showMessage(error.message);
@@ -237,6 +493,7 @@
 
       try {
         const result = await api("vote", {
+          slug: electionSlug,
           credential,
           candidate_id: selectedCandidate
         });
@@ -255,6 +512,8 @@
         voteButton.textContent = "Confirmar meu voto";
       }
     });
+
+    loadElection();
   </script>
 </body>
 </html>
