@@ -549,7 +549,11 @@ async function loadElectionDetails() {
   await loadParticipants();
   await updateVoteCount();
 }
-
+async function refreshAll() {
+  clearMessage();
+  await loadElections();
+  if (currentElection) await loadElectionDetails();
+}
 // Atualização automática do painel a cada 5 segundos
 async function automaticRefresh() {
   if (autoRefreshBusy || !isLoggedIn || document.hidden) return;
