@@ -319,6 +319,8 @@ const $ = (id) => document.getElementById(id);
 const BASE_URL = "https://mamao159.github.io/vota3";
 let currentElection = null;
 let participantsCache = [];
+let autoRefreshBusy = false;
+let isLoggedIn = false;
 
 function showMessage(text, type = "") {
   const el = $("message");
