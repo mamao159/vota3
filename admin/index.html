@@ -551,8 +551,9 @@ async function loadElectionDetails() {
     !["round_1", "round_2", "round_3"].includes(status);
 
   updateLinks();
-  await loadParticipants();
-  await updateVoteCount();
+await loadParticipants();
+await updateVoteCount();
+await setupRealtimeSubscription();
 }
 async function refreshAll() {
   clearMessage();
