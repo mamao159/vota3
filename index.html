@@ -1,22 +1,260 @@
-<!doctype html>
+
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#101827">
-  <title>Vota3 — Sistema de votação</title>
-  <link rel="stylesheet" href="assets/css/style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vota3 | Votação</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 24px 16px;
+      font-family: Arial, sans-serif;
+      background: #f1f5f9;
+      color: #172033;
+    }
+    .container {
+      max-width: 520px;
+      margin: 35px auto;
+      background: white;
+      padding: 28px;
+      border-radius: 16px;
+      box-shadow: 0 5px 25px #00000012;
+    }
+    h1 { text-align: center; margin-top: 0; }
+    .sub { text-align: center; color: #64748b; margin-bottom: 25px; }
+    label { display: block; font-weight: bold; margin: 16px 0 7px; }
+    input {
+      width: 100%;
+      padding: 13px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+    button {
+      width: 100%;
+      padding: 14px;
+      border: 0;
+      border-radius: 8px;
+      background: #174ea6;
+      color: white;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 18px;
+    }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+    .candidate {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px;
+      margin-top: 10px;
+      border: 1px solid #dbe2ea;
+      border-radius: 9px;
+      cursor: pointer;
+    }
+    .candidate input { width: 19px; height: 19px; }
+    .candidate label { margin: 0; cursor: pointer; flex: 1; }
+    #message {
+      margin-top: 18px;
+      padding: 12px;
+      border-radius: 8px;
+      display: none;
+      line-height: 1.5;
+    }
+    .error { display: block !important; background: #fee2e2; color: #991b1b; }
+    .success { display: block !important; background: #dcfce7; color: #166534; }
+    #votingArea { display: none; margin-top: 25px; }
+    .round {
+      text-align: center;
+      font-weight: bold;
+      background: #eff6ff;
+      padding: 12px;
+      border-radius: 8px;
+      margin: 15px 0;
+    }
+  </style>
 </head>
 <body>
-  <main class="shell">
-    <div class="brand-mark">V3</div>
-    <p class="eyebrow">SISTEMA DE VOTAÇÃO</p>
-    <h1>Vota<span>3</span></h1>
-    <p class="lead">Três escrutínios. Um processo organizado. Voto secreto.</p>
-    <section class="link-grid">
-      <a class="link-card" href="admin/"><span>01 / CONTROLE</span><strong>Painel do administrador</strong><small>Gerencie salas e participantes</small></a>
-      <a class="link-card" href="votar/"><span>02 / PARTICIPAÇÃO</span><strong>Área de votação</strong><small>Acesse sua sala e registre seu voto</small></a>
-      <a class="link-card" href="telao/"><span>03 / RESULTADOS</span><strong>Telão</strong><small>Acompanhe os resultados publicados</small></a>
+  <main class="container">
+    <h1>Vota3</h1>
+    <p class="sub">Sistema de votação</p>
+
+    <form id="accessForm">
+      <label for="slug">Identificador da eleição</label>
+      <input id="slug" required placeholder="Ex.: eleicao-2026">
+
+      <label for="credential">Sua credencial de votação</label>
+      <input id="credential" required autocomplete="off"
+        placeholder="Digite sua credencial">
+
+      <button type="submit" id="accessButton">Acessar votação</button>
+    </form>
+
+    <section id="votingArea">
+      <h2 id="electionName"></h2>
+      <div class="round" id="roundInfo"></div>
+
+      <p><strong>Escolha um candidato:</strong></p>
+      <div id="candidates"></div>
+
+      <button id="voteButton">Confirmar meu voto</button>
     </section>
-    <footer>Vota3 · Primeira versão em desenvolvimento</footer>
+
+    <div id="message" role="status"></div>
   </main>
-</body></html>
+
+  <script type="module">
+    import { SUPABASE_URL, SUPABASE_ANON_KEY }
+      from "../assets/js/config.js";
+
+    const API_URL = `${SUPABASE_URL}/functions/v1/vota3-api`;
+
+    const accessForm = document.getElementById("accessForm");
+    const accessButton = document.getElementById("accessButton");
+    const votingArea = document.getElementById("votingArea");
+    const candidatesArea = document.getElementById("candidates");
+    const voteButton = document.getElementById("voteButton");
+    const message = document.getElementById("message");
+
+    let credential = "";
+    let electionSlug = "";
+    let selectedCandidate = null;
+
+    function showMessage(text, type = "error") {
+      message.textContent = text;
+      message.className = type;
+    }
+
+    async function api(action, data = {}) {
+      const response = await fetch(API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`
+        },
+        body: JSON.stringify({ action, ...data })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || result.error) {
+        throw new Error(result.error || "Não foi possível completar a solicitação.");
+      }
+
+      return result;
+    }
+
+    accessForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      electionSlug = document.getElementById("slug").value.trim().toLowerCase();
+      credential = document.getElementById("credential").value.trim();
+
+      if (!electionSlug || !credential) {
+        showMessage("Informe a eleição e sua credencial.");
+        return;
+      }
+
+      accessButton.disabled = true;
+      accessButton.textContent = "Carregando...";
+      message.className = "";
+
+      try {
+        const result = await api("public_election", {
+          slug: electionSlug
+        });
+
+        document.getElementById("electionName").textContent =
+          result.election.name;
+
+        document.getElementById("roundInfo").textContent =
+          `ESCRUTÍNIO ${result.election.current_round}`;
+
+        candidatesArea.innerHTML = "";
+        selectedCandidate = null;
+
+        if (!result.candidates || result.candidates.length === 0) {
+          throw new Error("Não há candidatos disponíveis nesta votação.");
+        }
+
+        result.candidates.forEach((candidate) => {
+          const item = document.createElement("div");
+          item.className = "candidate";
+
+          const radio = document.createElement("input");
+          radio.type = "radio";
+          radio.name = "candidate";
+          radio.value = candidate.id;
+          radio.id = `candidate-${candidate.id}`;
+
+          radio.addEventListener("change", () => {
+            selectedCandidate = candidate.id;
+          });
+
+          const label = document.createElement("label");
+          label.htmlFor = radio.id;
+          label.textContent = candidate.name;
+
+          item.append(radio, label);
+          item.addEventListener("click", () => {
+            radio.checked = true;
+            selectedCandidate = candidate.id;
+          });
+
+          candidatesArea.appendChild(item);
+        });
+
+        accessForm.style.display = "none";
+        votingArea.style.display = "block";
+        showMessage("Eleição carregada. Escolha seu candidato.", "success");
+
+      } catch (error) {
+        showMessage(error.message);
+      } finally {
+        accessButton.disabled = false;
+        accessButton.textContent = "Acessar votação";
+      }
+    });
+
+    voteButton.addEventListener("click", async () => {
+      if (!selectedCandidate) {
+        showMessage("Selecione um candidato antes de confirmar.");
+        return;
+      }
+
+      const confirmed = confirm(
+        "Tem certeza? Depois de confirmado, não será possível votar novamente neste escrutínio."
+      );
+
+      if (!confirmed) return;
+
+      voteButton.disabled = true;
+      voteButton.textContent = "Registrando voto...";
+
+      try {
+        const result = await api("vote", {
+          credential,
+          candidate_id: selectedCandidate
+        });
+
+        showMessage(
+          result.message || "Seu voto foi registrado com sucesso!",
+          "success"
+        );
+
+        voteButton.style.display = "none";
+        candidatesArea.style.display = "none";
+
+      } catch (error) {
+        showMessage(error.message);
+        voteButton.disabled = false;
+        voteButton.textContent = "Confirmar meu voto";
+      }
+    });
+  </script>
+</body>
+</html>
