@@ -2,129 +2,311 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Vota3 | Administração</title>
-  <style>
-    * { box-sizing: border-box; }
-    body {
-      margin: 0; padding: 24px; background: #f3f5f9;
-      color: #202938; font-family: Arial, sans-serif;
-    }
-    main { max-width: 1000px; margin: auto; }
-    h1 { margin-bottom: 5px; }
-    h2 { font-size: 19px; }
-    .muted { color: #657184; font-size: 14px; }
-    .card {
-      background: white; padding: 22px; margin: 18px 0;
-      border-radius: 12px; box-shadow: 0 2px 10px #0000000b;
-    }
-    input, select {
-      width: 100%; padding: 12px; margin: 7px 0 12px;
-      border: 1px solid #ccd3df; border-radius: 7px;
-      font-size: 15px;
-    }
-    button {
-      border: 0; border-radius: 7px; padding: 11px 16px;
-      background: #2457d6; color: white; cursor: pointer;
-      margin: 4px 4px 4px 0; font-weight: bold;
-    }
-    button.secondary { background: #566477; }
-    button.danger { background: #b83232; }
-    button:disabled { opacity: .5; cursor: not-allowed; }
-    .hidden { display: none; }
-    .row { display: flex; gap: 10px; flex-wrap: wrap; }
-    .row > * { flex: 1; min-width: 180px; }
-    .participant {
-      border: 1px solid #e1e5ec; border-radius: 8px;
-      padding: 13px; margin: 9px 0;
-    }
-    .status { font-size: 13px; color: #657184; }
-    .message {
-      padding: 12px; border-radius: 7px; margin: 12px 0;
-      background: #eaf0ff; white-space: pre-wrap; overflow-wrap: anywhere;
-    }
-    .error { background: #ffeded; color: #9d2525; }
-    .success { background: #e9f8ed; color: #176b35; }
-    .result { padding: 10px; border-bottom: 1px solid #e5e8ef; }
-    @media(max-width:600px) { body { padding: 12px; } .card { padding: 16px; } }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0b1220">
+<title>Vota3 | Painel Administrativo</title>
+
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;padding:24px;
+  background:#0b1220;color:#e5eaf3;
+  font-family:Arial,sans-serif;
+}
+main{max-width:1150px;margin:auto}
+h1,h2,h3,p{margin-top:0}
+h1{font-size:29px;letter-spacing:-1px;margin-bottom:6px}
+h2{font-size:18px}
+h3{font-size:15px}
+.muted{color:#94a3b8;font-size:13px;line-height:1.5}
+.hidden{display:none!important}
+.card{
+  background:#151f32;border:1px solid #26354d;
+  padding:22px;border-radius:16px;margin:18px 0;
+  box-shadow:0 8px 25px #0002;
+}
+.topbar{
+  display:flex;justify-content:space-between;
+  align-items:center;gap:15px;flex-wrap:wrap;
+  margin-bottom:25px;
+}
+.brand{display:flex;align-items:center;gap:13px}
+.logo{
+  width:48px;height:48px;border-radius:14px;
+  display:grid;place-items:center;
+  background:linear-gradient(135deg,#2563eb,#7c3aed);
+  font-weight:900;font-size:20px;
+}
+.eyebrow{
+  color:#60a5fa;font-size:11px;
+  font-weight:bold;letter-spacing:2px;
+  text-transform:uppercase;margin-bottom:7px;
+}
+input,select{
+  width:100%;padding:13px;margin:7px 0 14px;
+  border:1px solid #34445e;border-radius:9px;
+  background:#0e1829;color:#f8fafc;font-size:15px;
+}
+input:focus,select:focus{outline:2px solid #3b82f6}
+label{font-size:13px;font-weight:bold;color:#cbd5e1}
+button{
+  border:0;border-radius:9px;padding:12px 16px;
+  background:#2563eb;color:white;cursor:pointer;
+  margin:4px 5px 4px 0;font-weight:bold;
+  transition:.2s;
+}
+button:hover:not(:disabled){filter:brightness(1.15);transform:translateY(-1px)}
+button:disabled{opacity:.4;cursor:not-allowed}
+button.secondary{background:#334155}
+button.success{background:#059669}
+button.danger{background:#b91c1c}
+button.purple{background:#6d45d9}
+.full{width:100%}
+.grid{
+  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:13px;margin:18px 0;
+}
+.stat{
+  background:#192740;border:1px solid #2b405f;
+  border-radius:14px;padding:18px;
+}
+.stat-label{
+  color:#94a3b8;font-size:12px;
+  text-transform:uppercase;letter-spacing:1px;
+}
+.stat-value{font-size:29px;font-weight:800;margin-top:9px}
+.stat-note{font-size:11px;color:#94a3b8;margin-top:6px}
+.status-pill{
+  display:inline-block;padding:6px 10px;
+  border-radius:30px;font-size:11px;font-weight:bold;
+  background:#334155;color:#cbd5e1;
+}
+.status-registration{background:#164e3c;color:#a7f3d0}
+.status-round{background:#1e3a8a;color:#bfdbfe}
+.status-finished{background:#4c1d95;color:#ddd6fe}
+.status-ready{background:#713f12;color:#fde68a}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.row>*{flex:1;min-width:180px}
+.message{
+  padding:13px;border-radius:10px;margin:15px 0;
+  background:#1e3a8a;color:#dbeafe;
+  white-space:pre-wrap;overflow-wrap:anywhere;
+}
+.message.error{background:#451e2a;color:#fecaca}
+.message.success{background:#123b31;color:#bbf7d0}
+.participant{
+  border:1px solid #2b3b54;border-radius:11px;
+  padding:14px;margin:10px 0;background:#111c2e;
+}
+.participant-name{font-weight:bold;margin-bottom:6px}
+.participant-details{font-size:12px;color:#94a3b8;margin-bottom:9px}
+.result{
+  display:flex;justify-content:space-between;gap:12px;
+  padding:13px 5px;border-bottom:1px solid #29384e;
+}
+.result strong{color:#93c5fd}
+.link-box{
+  background:#0e1829;border:1px solid #2b405f;
+  padding:15px;border-radius:11px;margin:12px 0;
+}
+.link-label{font-size:12px;color:#93c5fd;font-weight:bold;margin-bottom:8px}
+.link-value{font-size:12px;color:#cbd5e1;overflow-wrap:anywhere;line-height:1.5}
+.progress{
+  height:9px;background:#29384e;border-radius:20px;
+  overflow:hidden;margin:12px 0;
+}
+.progress-bar{
+  height:100%;width:0%;
+  background:linear-gradient(90deg,#2563eb,#8b5cf6);
+  transition:width .3s;
+}
+.section-head{
+  display:flex;justify-content:space-between;
+  align-items:center;gap:10px;flex-wrap:wrap;
+}
+.empty{
+  color:#94a3b8;text-align:center;
+  padding:25px 10px;font-size:14px;
+}
+hr{border:0;border-top:1px solid #29384e;margin:20px 0}
+@media(max-width:800px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:500px){
+  body{padding:12px}
+  .card{padding:17px}
+  .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+  .stat{padding:13px}
+  .stat-value{font-size:24px}
+}
+</style>
 </head>
+
 <body>
 <main>
-  <h1>Vota3 — Administração</h1>
-  <p class="muted">Painel de controle das eleições e dos três escrutínios.</p>
 
-  <div id="message" class="message hidden"></div>
+<header class="topbar">
+  <div class="brand">
+    <div class="logo">V3</div>
+    <div>
+      <div class="eyebrow">Plataforma de votação</div>
+      <h1>Vota3 <span style="color:#60a5fa">Admin</span></h1>
+      <p class="muted">Central de comando das eleições</p>
+    </div>
+  </div>
+  <div id="accountArea" class="hidden">
+    <span id="userEmail" class="muted"></span>
+    <button id="logoutBtn" class="secondary">Sair</button>
+  </div>
+</header>
 
-  <section id="login" class="card">
-    <h2>Acesso do administrador</h2>
-    <label>E-mail</label>
-    <input id="email" type="email" autocomplete="username" placeholder="Seu e-mail">
-    <label>Senha</label>
-    <input id="password" type="password" autocomplete="current-password" placeholder="Sua senha">
-    <button id="loginBtn">Entrar</button>
-  </section>
+<div id="message" class="message hidden"></div>
 
-  <section id="application" class="hidden">
+<section id="login" class="card" style="max-width:450px;margin:40px auto">
+  <div class="eyebrow">Área restrita</div>
+  <h2>Bem-vindo de volta!</h2>
+  <p class="muted">Entre para gerenciar suas eleições.</p>
+  <label>E-mail</label>
+  <input id="email" type="email" autocomplete="username" placeholder="Seu e-mail">
+  <label>Senha</label>
+  <input id="password" type="password" autocomplete="current-password" placeholder="Sua senha">
+  <button id="loginBtn" class="full">Entrar no painel</button>
+</section>
+
+<section id="application" class="hidden">
+
+  <div class="card">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">Visão geral</div>
+        <h2>Seu centro de operações</h2>
+        <p class="muted">Crie uma eleição ou selecione uma já existente.</p>
+      </div>
+      <button id="refreshBtn" class="secondary">↻ Atualizar</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="eyebrow">Nova eleição</div>
+    <h2>Criar uma eleição</h2>
+    <div class="row">
+      <div>
+        <label>Nome da eleição</label>
+        <input id="electionName" placeholder="Ex.: Eleição da Diretoria 2026">
+      </div>
+      <div>
+        <label>Identificador único</label>
+        <input id="electionSlug" placeholder="Ex.: diretoria-2026">
+      </div>
+    </div>
+    <button id="createElectionBtn">+ Criar eleição</button>
+    <p class="muted">Use letras minúsculas, números e hífens no identificador.</p>
+  </div>
+
+  <div class="card">
+    <div class="eyebrow">Gerenciamento</div>
+    <h2>Selecionar eleição</h2>
+    <select id="electionSelect">
+      <option value="">Carregando eleições...</option>
+    </select>
+    <div id="electionInfo" class="muted"></div>
+  </div>
+
+  <div id="electionArea" class="hidden">
+
     <div class="card">
-      <div class="row">
+      <div class="section-head">
         <div>
-          <h2>Minha conta</h2>
-          <div id="userEmail" class="muted"></div>
+          <div class="eyebrow">Painel da eleição</div>
+          <h2 id="dashboardName">Eleição selecionada</h2>
+          <p id="statusLabel" class="muted"></p>
         </div>
-        <div style="text-align:right">
-          <button id="logoutBtn" class="secondary">Sair</button>
+        <span id="statusPill" class="status-pill"></span>
+      </div>
+
+      <div class="grid">
+        <div class="stat">
+          <div class="stat-label">Participantes</div>
+          <div class="stat-value" id="participantCount">0</div>
+          <div class="stat-note">Inscritos na eleição</div>
         </div>
+        <div class="stat">
+          <div class="stat-label">Escrutínio</div>
+          <div class="stat-value" id="currentRound">0/3</div>
+          <div class="stat-note">Etapa atual</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Votos</div>
+          <div class="stat-value" id="voteCount">—</div>
+          <div class="stat-note">No escrutínio atual</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Progresso</div>
+          <div class="stat-value" id="progressValue">0%</div>
+          <div class="stat-note">Etapas concluídas</div>
+        </div>
+      </div>
+
+      <div class="muted">Progresso da eleição</div>
+      <div class="progress"><div id="progressBar" class="progress-bar"></div></div>
+    </div>
+
+    <div class="card">
+      <div class="eyebrow">Compartilhamento</div>
+      <h2>Links desta eleição</h2>
+      <p class="muted">Compartilhe o link de inscrição com os participantes e o link de votação quando o escrutínio estiver aberto.</p>
+
+      <div class="link-box">
+        <div class="link-label">LINK DE INSCRIÇÃO</div>
+        <div class="link-value" id="registrationLink"></div>
+        <button id="copyRegistration" class="success">Copiar link de inscrição</button>
+      </div>
+
+      <div class="link-box">
+        <div class="link-label">LINK DE VOTAÇÃO</div>
+        <div class="link-value" id="votingLink"></div>
+        <button id="copyVoting" class="purple">Copiar link de votação</button>
       </div>
     </div>
 
     <div class="card">
-      <h2>Criar eleição</h2>
-      <label>Nome da eleição</label>
-      <input id="electionName" placeholder="Ex.: Eleição da Diretoria 2026">
-      <label>Identificador da eleição (sem espaços)</label>
-      <input id="electionSlug" placeholder="Ex.: diretoria-2026">
-      <button id="createElectionBtn">Criar eleição</button>
-    </div>
-
-    <div class="card">
-      <h2>Selecionar eleição</h2>
-      <select id="electionSelect">
-        <option value="">Carregando eleições...</option>
-      </select>
-      <button id="refreshBtn" class="secondary">Atualizar dados</button>
-      <div id="electionInfo" class="muted"></div>
-    </div>
-
-    <div id="electionArea" class="hidden">
-      <div class="card">
-        <h2>Controle da eleição</h2>
-        <p id="roundInfo" class="muted"></p>
-        <button id="registrationBtn">Abrir inscrições</button>
+      <div class="eyebrow">Comando da eleição</div>
+      <h2>Controle dos escrutínios</h2>
+      <p id="roundInfo" class="muted"></p>
+      <div class="row">
+        <button id="registrationBtn" class="success">Abrir inscrições</button>
         <button id="startRoundBtn">Iniciar próximo escrutínio</button>
         <button id="closeRoundBtn" class="danger">Encerrar escrutínio atual</button>
       </div>
-
-      <div class="card">
-        <h2>Participantes</h2>
-        <p class="muted">Os participantes são liberados automaticamente após o cadastro. Você pode excluir inscrições indevidas antes do início da votação.</p>
-        <div id="participants">Selecione uma eleição.</div>
-      </div>
-
-      <div class="card">
-        <h2>Resultados</h2>
-        <p class="muted">Os resultados exibidos são totais, sem identificação dos eleitores.</p>
-        <select id="resultRound">
-          <option value="1">Primeiro escrutínio</option>
-          <option value="2">Segundo escrutínio</option>
-          <option value="3">Terceiro escrutínio</option>
-        </select>
-        <button id="resultsBtn">Consultar resultado</button>
-        <div id="results"></div>
-      </div>
     </div>
-  </section>
+
+    <div class="card">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">Lista de inscritos</div>
+          <h2>Participantes</h2>
+        </div>
+        <span id="participantBadge" class="status-pill">0 participantes</span>
+      </div>
+      <p class="muted">As inscrições são aprovadas automaticamente. Você pode excluir cadastros indevidos antes que participem da votação.</p>
+      <div id="participants"></div>
+    </div>
+
+    <div class="card">
+      <div class="eyebrow">Apuração</div>
+      <h2>Resultados da votação</h2>
+      <p class="muted">Os resultados são agregados e não identificam os eleitores.</p>
+      <label>Selecionar escrutínio</label>
+      <select id="resultRound">
+        <option value="1">Primeiro escrutínio</option>
+        <option value="2">Segundo escrutínio</option>
+        <option value="3">Terceiro escrutínio</option>
+      </select>
+      <button id="resultsBtn">Consultar resultado</button>
+      <div id="results"></div>
+    </div>
+
+  </div>
+</section>
 </main>
 
 <script type="module">
@@ -134,13 +316,16 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../assets/js/config.js";
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const $ = (id) => document.getElementById(id);
 
+const BASE_URL = "https://mamao159.github.io/vota3";
 let currentElection = null;
+let participantsCache = [];
 
-function showMessage(message, type = "") {
+function showMessage(text, type = "") {
   const el = $("message");
-  el.textContent = message;
+  el.textContent = text;
   el.className = "message " + type;
   el.classList.remove("hidden");
+  window.scrollTo({top: 0, behavior: "smooth"});
 }
 
 function clearMessage() {
@@ -156,9 +341,9 @@ async function api(action, data = {}) {
     headers: {
       "Content-Type": "application/json",
       "apikey": SUPABASE_ANON_KEY,
-      ...(token ? { "Authorization": `Bearer ${token}` } : {})
+      ...(token ? {"Authorization": `Bearer ${token}`} : {})
     },
-    body: JSON.stringify({ action, ...data })
+    body: JSON.stringify({action, ...data})
   });
 
   const result = await response.json();
@@ -171,7 +356,41 @@ async function api(action, data = {}) {
 function setLoggedIn(user) {
   $("login").classList.add("hidden");
   $("application").classList.remove("hidden");
+  $("accountArea").classList.remove("hidden");
   $("userEmail").textContent = user.email || "";
+}
+
+function electionStatus(status) {
+  const names = {
+    draft: "Em preparação",
+    registration: "Inscrições abertas",
+    ready: "Aguardando próximo escrutínio",
+    round_1: "Primeiro escrutínio em andamento",
+    round_2: "Segundo escrutínio em andamento",
+    round_3: "Terceiro escrutínio em andamento",
+    finished: "Eleição finalizada"
+  };
+  return names[status] || status;
+}
+
+function updateLinks() {
+  if (!currentElection) return;
+
+  const slug = encodeURIComponent(currentElection.slug);
+  const registrationUrl = `${BASE_URL}/inscricao/?e=${slug}`;
+  const votingUrl = `${BASE_URL}/votar/?e=${slug}`;
+
+  $("registrationLink").textContent = registrationUrl;
+  $("votingLink").textContent = votingUrl;
+}
+
+async function copyText(text, successMessage) {
+  try {
+    await navigator.clipboard.writeText(text);
+    showMessage(successMessage, "success");
+  } catch {
+    showMessage("Não foi possível copiar automaticamente. Selecione e copie o endereço exibido.", "error");
+  }
 }
 
 async function loadElections() {
@@ -182,7 +401,7 @@ async function loadElections() {
   for (const election of result.elections) {
     const option = document.createElement("option");
     option.value = election.id;
-    option.textContent = election.name + " — " + election.status;
+    option.textContent = `${election.name} — ${electionStatus(election.status)}`;
     select.appendChild(option);
   }
 
@@ -196,38 +415,46 @@ async function loadElections() {
 
 async function loadParticipants() {
   if (!currentElection) return;
+
   const result = await api("admin_list_participants", {
     election_id: currentElection.id
   });
 
+  participantsCache = result.participants || [];
   const container = $("participants");
   container.innerHTML = "";
 
-  if (!result.participants.length) {
-    container.textContent = "Ainda não há participantes inscritos.";
+  const total = participantsCache.length;
+  $("participantCount").textContent = total;
+  $("participantBadge").textContent = `${total} participante(s)`;
+
+  if (!total) {
+    container.innerHTML = '<div class="empty">Ainda não há participantes inscritos.</div>';
     return;
   }
 
-  for (const participant of result.participants) {
+  for (const participant of participantsCache) {
     const item = document.createElement("div");
     item.className = "participant";
 
-    const name = document.createElement("strong");
+    const name = document.createElement("div");
+    name.className = "participant-name";
     name.textContent = participant.full_name;
 
     const details = document.createElement("div");
-    details.className = "status";
+    details.className = "participant-details";
     details.textContent =
-      `Nascimento: ${participant.birth_date} | Situação: ${participant.status}`;
+      `Nascimento: ${participant.birth_date} · Situação: ${participant.status}`;
 
     item.append(name, details);
 
     const remove = document.createElement("button");
     remove.textContent = "Excluir cadastro";
     remove.className = "danger";
+
     remove.addEventListener("click", async () => {
       const confirmed = confirm(
-        `Deseja realmente excluir o cadastro de ${participant.full_name}?\\n\\nEssa ação não poderá ser desfeita.`
+        `Deseja realmente excluir o cadastro de ${participant.full_name}?\n\nEssa ação não poderá ser desfeita.`
       );
       if (!confirmed) return;
 
@@ -244,9 +471,28 @@ async function loadParticipants() {
         remove.disabled = false;
       }
     });
-    item.appendChild(remove);
 
+    item.appendChild(remove);
     container.appendChild(item);
+  }
+}
+
+async function updateVoteCount() {
+  const round = Number(currentElection.current_round || 0);
+
+  if (![1, 2, 3].includes(round)) {
+    $("voteCount").textContent = "—";
+    return;
+  }
+
+  try {
+    const result = await api("results", {
+      election_id: currentElection.id,
+      round
+    });
+    $("voteCount").textContent = result.total_votes;
+  } catch {
+    $("voteCount").textContent = "—";
   }
 }
 
@@ -261,20 +507,44 @@ async function loadElectionDetails() {
   if (!currentElection) throw new Error("Eleição não encontrada.");
 
   $("electionArea").classList.remove("hidden");
+  $("dashboardName").textContent = currentElection.name;
   $("electionInfo").textContent =
-    `Situação: ${currentElection.status} | Escrutínio atual: ${currentElection.current_round}`;
+    `Situação: ${electionStatus(currentElection.status)}`;
+
+  const status = currentElection.status;
+  $("statusLabel").textContent = electionStatus(status);
+  $("statusPill").textContent = electionStatus(status);
+  $("statusPill").className = "status-pill";
+
+  if (status === "registration") {
+    $("statusPill").classList.add("status-registration");
+  } else if (status.startsWith("round_")) {
+    $("statusPill").classList.add("status-round");
+  } else if (status === "finished") {
+    $("statusPill").classList.add("status-finished");
+  } else if (status === "ready") {
+    $("statusPill").classList.add("status-ready");
+  }
+
+  const round = Number(currentElection.current_round || 0);
+  $("currentRound").textContent = `${round}/3`;
+
+  const progress = status === "finished" ? 100 : Math.round((round / 3) * 100);
+  $("progressValue").textContent = `${progress}%`;
+  $("progressBar").style.width = `${progress}%`;
 
   $("roundInfo").textContent =
-    `Situação: ${currentElection.status}. Escrutínio atual: ${currentElection.current_round || "Nenhum"}.`;
+    `Situação: ${electionStatus(status)}. Escrutínio atual: ${round || "Nenhum"}.`;
 
-  $("registrationBtn").disabled = currentElection.status !== "draft";
+  $("registrationBtn").disabled = status !== "draft";
   $("startRoundBtn").disabled =
-    !["registration", "ready"].includes(currentElection.status) ||
-    currentElection.current_round >= 3;
+    !["registration", "ready"].includes(status) || round >= 3;
   $("closeRoundBtn").disabled =
-    !["round_1", "round_2", "round_3"].includes(currentElection.status);
+    !["round_1", "round_2", "round_3"].includes(status);
 
+  updateLinks();
   await loadParticipants();
+  await updateVoteCount();
 }
 
 async function refreshAll() {
@@ -286,7 +556,7 @@ async function refreshAll() {
 $("loginBtn").addEventListener("click", async () => {
   try {
     clearMessage();
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const {data, error} = await supabase.auth.signInWithPassword({
       email: $("email").value.trim(),
       password: $("password").value
     });
@@ -299,6 +569,10 @@ $("loginBtn").addEventListener("click", async () => {
   }
 });
 
+$("password").addEventListener("keydown", (event) => {
+  if (event.key === "Enter") $("loginBtn").click();
+});
+
 $("logoutBtn").addEventListener("click", async () => {
   await supabase.auth.signOut();
   location.reload();
@@ -309,14 +583,24 @@ $("createElectionBtn").addEventListener("click", async () => {
     clearMessage();
     const name = $("electionName").value.trim();
     const slug = $("electionSlug").value.trim().toLowerCase();
-    const result = await api("admin_create_election", { name, slug });
+
+    const result = await api("admin_create_election", {name, slug});
+
     showMessage("Eleição criada com sucesso!", "success");
+    $("electionName").value = "";
+    $("electionSlug").value = "";
+
     await loadElections();
     $("electionSelect").value = result.election.id;
     await loadElectionDetails();
   } catch (error) {
     showMessage(error.message, "error");
   }
+});
+
+$("electionSlug").addEventListener("input", () => {
+  $("electionSlug").value = $("electionSlug").value
+    .toLowerCase().replace(/[^a-z0-9-]/g, "");
 });
 
 $("electionSelect").addEventListener("change", async () => {
@@ -363,6 +647,7 @@ $("startRoundBtn").addEventListener("click", async () => {
 
 $("closeRoundBtn").addEventListener("click", async () => {
   if (!confirm("Tem certeza de que deseja encerrar o escrutínio atual?")) return;
+
   try {
     await api("admin_close_round", {
       election_id: currentElection.id
@@ -380,17 +665,31 @@ $("resultsBtn").addEventListener("click", async () => {
       election_id: currentElection.id,
       round: Number($("resultRound").value)
     });
+
     const container = $("results");
     container.innerHTML = "";
 
     const heading = document.createElement("p");
+    heading.className = "muted";
     heading.textContent = `Total de votos: ${result.total_votes}`;
     container.appendChild(heading);
+
+    if (!result.results.length) {
+      container.innerHTML += '<div class="empty">Nenhum voto registrado neste escrutínio.</div>';
+      return;
+    }
 
     result.results.forEach((item, index) => {
       const row = document.createElement("div");
       row.className = "result";
-      row.textContent = `${index + 1}º — ${item.name}: ${item.votes} voto(s)`;
+
+      const name = document.createElement("span");
+      name.textContent = `${index + 1}º — ${item.name}`;
+
+      const votes = document.createElement("strong");
+      votes.textContent = `${item.votes} voto(s)`;
+
+      row.append(name, votes);
       container.appendChild(row);
     });
   } catch (error) {
@@ -398,7 +697,24 @@ $("resultsBtn").addEventListener("click", async () => {
   }
 });
 
-const { data: initialSession } = await supabase.auth.getSession();
+$("copyRegistration").addEventListener("click", () => {
+  if (!currentElection) return;
+  copyText(
+    `${BASE_URL}/inscricao/?e=${encodeURIComponent(currentElection.slug)}`,
+    "Link de inscrição copiado!"
+  );
+});
+
+$("copyVoting").addEventListener("click", () => {
+  if (!currentElection) return;
+  copyText(
+    `${BASE_URL}/votar/?e=${encodeURIComponent(currentElection.slug)}`,
+    "Link de votação copiado!"
+  );
+});
+
+const {data: initialSession} = await supabase.auth.getSession();
+
 if (initialSession.session?.user) {
   setLoggedIn(initialSession.session.user);
   try {
