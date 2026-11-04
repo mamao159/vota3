@@ -429,8 +429,9 @@ async function loadParticipants() {
   });
 
   participantsCache = result.participants || [];
-  const container = $("participants");
-  container.innerHTML = "";
+  const container = $("results");
+container.dataset.round = $("resultRound").value;
+container.innerHTML = "";
 
   const total = participantsCache.length;
   $("participantCount").textContent = total;
