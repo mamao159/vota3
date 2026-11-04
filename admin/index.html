@@ -559,6 +559,126 @@ async function refreshAll() {
   await loadElections();
   if (currentElection) await loadElectionDetails();
 }
+  // Encerra a inscrição anterior
+async function stopRealtimeSubscription() {
+  if (realtimeChannel) {
+    await supabase.removeChannel(realtimeChannel);
+    realtimeChannel = null;
+    realtimeElectionId = null;
+  }
+}
+
+// Agrupa eventos próximos para evitar atualizações repetidas
+function scheduleRealtimeUpdate(type) {
+  pendingRealtimeUpdates.add(type);
+
+  if (realtimeTimer) return;
+
+  realtimeTimer = setTimeout(async () => {
+    const updates = new Set(pendingRealtimeUpdates);
+    pendingRealtimeUpdates.clear();
+    realtimeTimer = null;
+
+    try {
+      if (updates.has("election")) {
+        await loadElections();
+
+        if (currentElection) {
+          await loadElectionDetails();
+        }
+      } else {
+        if (updates.has("participants")) {
+          await loadParticipants();
+        }
+
+        if (updates.has("ballots")) {
+          await updateVoteCount();
+
+          if ($("results").dataset.round) {
+            $("resultsBtn").click();
+          }
+        }
+      }
+    } catch (error) {
+      console.warn("Erro ao atualizar dados do Realtime:", error);
+    }
+
+    if (pendingRealtimeUpdates.size) {
+      const next = [...pendingRealtimeUpdates];
+      pendingRealtimeUpdates.clear();
+      next.forEach(scheduleRealtimeUpdate);
+    }
+  }, 300);
+}
+
+// Inscreve o painel nos eventos da eleição selecionada
+async function setupRealtimeSubscription() {
+  if (!currentElection) {
+    await stopRealtimeSubscription();
+    return;
+  }
+
+  if (realtimeElectionId === currentElection.id && realtimeChannel) {
+    return;
+  }
+
+  await stopRealtimeSubscription();
+
+  const electionId = currentElection.id;
+
+  realtimeChannel = supabase
+    .channel(`vota3-admin-${electionId}`)
+
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "elections",
+        filter: `id=eq.${electionId}`
+      },
+      () => scheduleRealtimeUpdate("election")
+    )
+
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "participants",
+        filter: `election_id=eq.${electionId}`
+      },
+      () => scheduleRealtimeUpdate("participants")
+    )
+
+    .on(
+      "postgres_changes",
+      {
+        event: "UPDATE",
+        schema: "public",
+        table: "participants",
+        filter: `election_id=eq.${electionId}`
+      },
+      () => scheduleRealtimeUpdate("participants")
+    )
+
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "ballots",
+        filter: `election_id=eq.${electionId}`
+      },
+      () => scheduleRealtimeUpdate("ballots")
+    )
+
+    .subscribe((status) => {
+      console.log("Vota3 Realtime:", status);
+    });
+
+  realtimeElectionId = electionId;
+}
 // Atualização automática do painel a cada 5 segundos
 async function automaticRefresh() {
   if (autoRefreshBusy || !isLoggedIn || document.hidden) return;
