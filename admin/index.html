@@ -108,7 +108,7 @@
 
       <div class="card">
         <h2>Participantes</h2>
-        <p class="muted">Aprove os inscritos para liberar a participação na eleição.</p>
+        <p class="muted">Os participantes são liberados automaticamente após o cadastro. Você pode excluir inscrições indevidas antes do início da votação.</p>
         <div id="participants">Selecione uma eleição.</div>
       </div>
 
@@ -222,28 +222,29 @@ async function loadParticipants() {
 
     item.append(name, details);
 
-    if (participant.status === "pending") {
-      const approve = document.createElement("button");
-      approve.textContent = "Aprovar participante";
-      approve.addEventListener("click", async () => {
-        try {
-          approve.disabled = true;
-          const result = await api("admin_approve_participant", {
-            election_id: currentElection.id,
-            participant_id: participant.id
-          });
-          showMessage(
-            `Participante aprovado!\n\nCredencial individual:\n${result.credential}\n\nCopie e entregue ao participante. Ela não será exibida novamente.`,
-            "success"
-          );
-          await loadParticipants();
-        } catch (error) {
-          showMessage(error.message, "error");
-          approve.disabled = false;
-        }
-      });
-      item.appendChild(approve);
-    }
+    const remove = document.createElement("button");
+    remove.textContent = "Excluir cadastro";
+    remove.className = "danger";
+    remove.addEventListener("click", async () => {
+      const confirmed = confirm(
+        `Deseja realmente excluir o cadastro de ${participant.full_name}?\\n\\nEssa ação não poderá ser desfeita.`
+      );
+      if (!confirmed) return;
+
+      try {
+        remove.disabled = true;
+        await api("admin_delete_participant", {
+          election_id: currentElection.id,
+          participant_id: participant.id
+        });
+        showMessage("Cadastro excluído.", "success");
+        await loadParticipants();
+      } catch (error) {
+        showMessage(error.message, "error");
+        remove.disabled = false;
+      }
+    });
+    item.appendChild(remove);
 
     container.appendChild(item);
   }
