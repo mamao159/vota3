@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vota3 | Inscrição</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 24px 16px;
+      font-family: Arial, sans-serif;
+      background: #f1f5f9;
+      color: #172033;
+    }
+    .container {
+      max-width: 520px;
+      margin: 35px auto;
+      background: white;
+      padding: 28px;
+      border-radius: 16px;
+      box-shadow: 0 5px 25px #00000012;
+    }
+    h1 { text-align: center; margin-top: 0; }
+    .sub { text-align: center; color: #64748b; margin-bottom: 25px; }
+    label { display: block; font-weight: bold; margin: 16px 0 7px; }
+    input {
+      width: 100%;
+      padding: 13px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+    button {
+      width: 100%;
+      padding: 14px;
+      border: 0;
+      border-radius: 8px;
+      background: #2f4da8;
+      color: white;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 20px;
+    }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+    #message {
+      margin-top: 18px;
+      padding: 12px;
+      border-radius: 8px;
+      display: none;
+      line-height: 1.5;
+    }
+    .error { display: block !important; background: #fee2e2; color: #991b1b; }
+    .success { display: block !important; background: #dcfce7; color: #166534; }
+    .hint {
+      color: #64748b;
+      font-size: 13px;
+      line-height: 1.5;
+      margin-top: 6px;
+    }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <h1>Vota3</h1>
+    <p class="sub">Inscrição de participante</p>
+
+    <form id="registrationForm">
+      <label for="slug">Identificador da eleição</label>
+      <input id="slug" required maxlength="60"
+        placeholder="Ex.: eleicao-2026" autocomplete="off">
+      <p class="hint">Solicite esse identificador ao organizador da eleição.</p>
+
+      <label for="fullName">Nome completo</label>
+      <input id="fullName" required minlength="2" maxlength="150"
+        placeholder="Digite seu nome completo" autocomplete="name">
+
+      <label for="birthDate">Data de nascimento</label>
+      <input id="birthDate" type="date" required>
+      <p class="hint">A idade será calculada pelo sistema com base nesta data.</p>
+
+      <button type="submit" id="submitButton">Enviar inscrição</button>
+    </form>
+
+    <div id="message" role="status" aria-live="polite"></div>
+  </main>
+
+  <script type="module">
+    import { SUPABASE_URL, SUPABASE_ANON_KEY }
+      from "../assets/js/config.js";
+
+    const API_URL = `${SUPABASE_URL}/functions/v1/vota3-api`;
+
+    const form = document.getElementById("registrationForm");
+    const submitButton = document.getElementById("submitButton");
+    const message = document.getElementById("message");
+    const birthDate = document.getElementById("birthDate");
+
+    // Impede selecionar uma data futura.
+    birthDate.max = new Date().toISOString().slice(0, 10);
+
+    function showMessage(text, type = "error") {
+      message.textContent = text;
+      message.className = type;
+    }
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      message.className = "";
+
+      const slug = document.getElementById("slug").value.trim().toLowerCase();
+      const fullName = document.getElementById("fullName").value.trim();
+      const date = birthDate.value;
+
+      if (!slug || !fullName || !date) {
+        showMessage("Preencha todos os campos.");
+        return;
+      }
+
+      if (new Date(date + "T00:00:00") > new Date()) {
+        showMessage("A data de nascimento não pode ser futura.");
+        return;
+      }
+
+      submitButton.disabled = true;
+      submitButton.textContent = "Enviando inscrição...";
+
+      try {
+        const response = await fetch(API_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": SUPABASE_ANON_KEY,
+            "Authorization": `Bearer ${SUPABASE_ANON_KEY}`
+          },
+          body: JSON.stringify({
+            action: "public_register",
+            slug,
+            full_name: fullName,
+            birth_date: date
+          })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok || result.error) {
+          throw new Error(result.error || "Não foi possível enviar sua inscrição.");
+        }
+
+        form.reset();
+        birthDate.max = new Date().toISOString().slice(0, 10);
+        showMessage(
+          "Inscrição enviada com sucesso! Aguarde a análise e aprovação do organizador. Sua credencial será disponibilizada após a aprovação.",
+          "success"
+        );
+
+      } catch (error) {
+        showMessage(error.message || "Ocorreu um erro ao enviar sua inscrição.");
+      } finally {
+        submitButton.disabled = false;
+        submitButton.textContent = "Enviar inscrição";
+      }
+    });
+  </script>
+</body>
+</html>
