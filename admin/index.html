@@ -317,6 +317,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const $ = (id) => document.getElementById(id);
 
 const BASE_URL = "https://mamao159.github.io/vota3";
+
 let currentElection = null;
 let participantsCache = [];
 
@@ -324,8 +325,9 @@ let realtimeChannel = null;
 let realtimeElectionId = null;
 let realtimeTimer = null;
 let pendingRealtimeUpdates = new Set();
-let autoRefreshBusy = false;
-let isLoggedIn = false;
+let processingRealtime = false;
+let selectionVersion = 0;
+let lastResultsRound = null;
 
 function showMessage(text, type = "") {
   const el = $("message");
@@ -354,14 +356,15 @@ async function api(action, data = {}) {
   });
 
   const result = await response.json();
+
   if (!response.ok || result.error) {
     throw new Error(result.error || "Não foi possível concluir a operação.");
   }
+
   return result;
 }
 
 function setLoggedIn(user) {
-  isLoggedIn = true;
   $("login").classList.add("hidden");
   $("application").classList.remove("hidden");
   $("accountArea").classList.remove("hidden");
@@ -378,6 +381,7 @@ function electionStatus(status) {
     round_3: "Terceiro escrutínio em andamento",
     finished: "Eleição finalizada"
   };
+
   return names[status] || status;
 }
 
@@ -385,11 +389,12 @@ function updateLinks() {
   if (!currentElection) return;
 
   const slug = encodeURIComponent(currentElection.slug);
-  const registrationUrl = `${BASE_URL}/inscricao/?e=${slug}`;
-  const votingUrl = `${BASE_URL}/votar/?e=${slug}`;
 
-  $("registrationLink").textContent = registrationUrl;
-  $("votingLink").textContent = votingUrl;
+  $("registrationLink").textContent =
+    `${BASE_URL}/inscricao/?e=${slug}`;
+
+  $("votingLink").textContent =
+    `${BASE_URL}/votar/?e=${slug}`;
 }
 
 async function copyText(text, successMessage) {
@@ -397,130 +402,56 @@ async function copyText(text, successMessage) {
     await navigator.clipboard.writeText(text);
     showMessage(successMessage, "success");
   } catch {
-    showMessage("Não foi possível copiar automaticamente. Selecione e copie o endereço exibido.", "error");
+    showMessage(
+      "Não foi possível copiar automaticamente. Selecione e copie o endereço exibido.",
+      "error"
+    );
   }
 }
+
+// --------------------------------------------------
+// ELEIÇÕES
+// --------------------------------------------------
 
 async function loadElections() {
   const result = await api("admin_list_elections");
   const select = $("electionSelect");
-  select.innerHTML = '<option value="">Selecione uma eleição</option>';
 
-  for (const election of result.elections) {
+  const selectedId = currentElection?.id || select.value;
+
+  select.innerHTML =
+    '<option value="">Selecione uma eleição</option>';
+
+  for (const election of result.elections || []) {
     const option = document.createElement("option");
+
     option.value = election.id;
-    option.textContent = `${election.name} — ${electionStatus(election.status)}`;
+    option.textContent =
+      `${election.name} — ${electionStatus(election.status)}`;
+
     select.appendChild(option);
   }
 
-  if (currentElection && result.elections.some(e => e.id === currentElection.id)) {
-    select.value = currentElection.id;
+  if (selectedId && result.elections?.some(e => e.id === selectedId)) {
+    select.value = selectedId;
   } else {
+    select.value = "";
     currentElection = null;
     $("electionArea").classList.add("hidden");
+    await stopRealtimeSubscription();
   }
+
+  return result.elections || [];
 }
 
-async function loadParticipants() {
-  if (!currentElection) return;
+function renderElectionDetails(election) {
+  const status = election.status;
+  const round = Number(election.current_round || 0);
 
-  const result = await api("admin_list_participants", {
-    election_id: currentElection.id
-  });
-
-  participantsCache = result.participants || [];
-  const container = $("results");
-container.dataset.round = $("resultRound").value;
-container.innerHTML = "";
-
-  const total = participantsCache.length;
-  $("participantCount").textContent = total;
-  $("participantBadge").textContent = `${total} participante(s)`;
-
-  if (!total) {
-    container.innerHTML = '<div class="empty">Ainda não há participantes inscritos.</div>';
-    return;
-  }
-
-  for (const participant of participantsCache) {
-    const item = document.createElement("div");
-    item.className = "participant";
-
-    const name = document.createElement("div");
-    name.className = "participant-name";
-    name.textContent = participant.full_name;
-
-    const details = document.createElement("div");
-    details.className = "participant-details";
-    details.textContent =
-      `Nascimento: ${participant.birth_date} · Situação: ${participant.status}`;
-
-    item.append(name, details);
-
-    const remove = document.createElement("button");
-    remove.textContent = "Excluir cadastro";
-    remove.className = "danger";
-
-    remove.addEventListener("click", async () => {
-      const confirmed = confirm(
-        `Deseja realmente excluir o cadastro de ${participant.full_name}?\n\nEssa ação não poderá ser desfeita.`
-      );
-      if (!confirmed) return;
-
-      try {
-        remove.disabled = true;
-        await api("admin_delete_participant", {
-          election_id: currentElection.id,
-          participant_id: participant.id
-        });
-        showMessage("Cadastro excluído.", "success");
-        await loadParticipants();
-      } catch (error) {
-        showMessage(error.message, "error");
-        remove.disabled = false;
-      }
-    });
-
-    item.appendChild(remove);
-    container.appendChild(item);
-  }
-}
-
-async function updateVoteCount() {
-  const round = Number(currentElection.current_round || 0);
-
-  if (![1, 2, 3].includes(round)) {
-    $("voteCount").textContent = "—";
-    return;
-  }
-
-  try {
-    const result = await api("results", {
-      election_id: currentElection.id,
-      round
-    });
-    $("voteCount").textContent = result.total_votes;
-  } catch {
-    $("voteCount").textContent = "—";
-  }
-}
-
-async function loadElectionDetails() {
-  const id = $("electionSelect").value;
-  currentElection = null;
-  $("electionArea").classList.add("hidden");
-  if (!id) return;
-
-  const { elections } = await api("admin_list_elections");
-  currentElection = elections.find(e => e.id === id);
-  if (!currentElection) throw new Error("Eleição não encontrada.");
-
-  $("electionArea").classList.remove("hidden");
-  $("dashboardName").textContent = currentElection.name;
+  $("dashboardName").textContent = election.name;
   $("electionInfo").textContent =
-    `Situação: ${electionStatus(currentElection.status)}`;
+    `Situação: ${electionStatus(status)}`;
 
-  const status = currentElection.status;
   $("statusLabel").textContent = electionStatus(status);
   $("statusPill").textContent = electionStatus(status);
   $("statusPill").className = "status-pill";
@@ -535,10 +466,12 @@ async function loadElectionDetails() {
     $("statusPill").classList.add("status-ready");
   }
 
-  const round = Number(currentElection.current_round || 0);
   $("currentRound").textContent = `${round}/3`;
 
-  const progress = status === "finished" ? 100 : Math.round((round / 3) * 100);
+  const progress = status === "finished"
+    ? 100
+    : Math.round((round / 3) * 100);
+
   $("progressValue").textContent = `${progress}%`;
   $("progressBar").style.width = `${progress}%`;
 
@@ -546,89 +479,351 @@ async function loadElectionDetails() {
     `Situação: ${electionStatus(status)}. Escrutínio atual: ${round || "Nenhum"}.`;
 
   $("registrationBtn").disabled = status !== "draft";
+
   $("startRoundBtn").disabled =
     !["registration", "ready"].includes(status) || round >= 3;
+
   $("closeRoundBtn").disabled =
     !["round_1", "round_2", "round_3"].includes(status);
 
   updateLinks();
-await loadParticipants();
-await updateVoteCount();
-await setupRealtimeSubscription();
 }
-async function refreshAll() {
-  clearMessage();
-  await loadElections();
-  if (currentElection) await loadElectionDetails();
-}
-  // Encerra a inscrição anterior
-async function stopRealtimeSubscription() {
-  if (realtimeChannel) {
-    await supabase.removeChannel(realtimeChannel);
-    realtimeChannel = null;
-    realtimeElectionId = null;
+
+// --------------------------------------------------
+// PARTICIPANTES
+// --------------------------------------------------
+
+async function loadParticipants() {
+  const election = currentElection;
+
+  if (!election) return;
+
+  const result = await api("admin_list_participants", {
+    election_id: election.id
+  });
+
+  // Não aplica respostas antigas se a eleição mudou
+  if (!currentElection || currentElection.id !== election.id) return;
+
+  participantsCache = result.participants || [];
+
+  const container = $("participants");
+  container.innerHTML = "";
+
+  const total = participantsCache.length;
+
+  $("participantCount").textContent = total;
+  $("participantBadge").textContent =
+    `${total} participante(s)`;
+
+  if (!total) {
+    container.innerHTML =
+      '<div class="empty">Ainda não há participantes inscritos.</div>';
+    return;
   }
-}
 
-// Agrupa eventos próximos para evitar atualizações repetidas
-function scheduleRealtimeUpdate(type) {
-  pendingRealtimeUpdates.add(type);
+  for (const participant of participantsCache) {
+    const item = document.createElement("div");
+    item.className = "participant";
 
-  if (realtimeTimer) return;
+    const name = document.createElement("div");
+    name.className = "participant-name";
+    name.textContent = participant.full_name;
 
-  realtimeTimer = setTimeout(async () => {
-    const updates = new Set(pendingRealtimeUpdates);
-    pendingRealtimeUpdates.clear();
-    realtimeTimer = null;
+    const details = document.createElement("div");
+    details.className = "participant-details";
 
-    try {
-      if (updates.has("election")) {
-        await loadElections();
+    details.textContent =
+      `Nascimento: ${participant.birth_date} · Situação: ${participant.status}`;
 
-        if (currentElection) {
-          await loadElectionDetails();
-        }
-      } else {
-        if (updates.has("participants")) {
+    item.append(name, details);
+
+    const remove = document.createElement("button");
+    remove.textContent = "Excluir cadastro";
+    remove.className = "danger";
+
+    remove.addEventListener("click", async () => {
+      const confirmed = confirm(
+        `Deseja realmente excluir o cadastro de ${participant.full_name}?\n\nEssa ação não poderá ser desfeita.`
+      );
+
+      if (!confirmed) return;
+
+      try {
+        remove.disabled = true;
+
+        await api("admin_delete_participant", {
+          election_id: election.id,
+          participant_id: participant.id
+        });
+
+        showMessage("Cadastro excluído.", "success");
+
+        if (currentElection?.id === election.id) {
           await loadParticipants();
         }
 
-        if (updates.has("ballots")) {
-          await updateVoteCount();
-
-          if ($("results").dataset.round) {
-            $("resultsBtn").click();
-          }
-        }
+      } catch (error) {
+        showMessage(error.message, "error");
+        remove.disabled = false;
       }
-    } catch (error) {
-      console.warn("Erro ao atualizar dados do Realtime:", error);
-    }
+    });
 
-    if (pendingRealtimeUpdates.size) {
-      const next = [...pendingRealtimeUpdates];
-      pendingRealtimeUpdates.clear();
-      next.forEach(scheduleRealtimeUpdate);
-    }
-  }, 300);
+    item.appendChild(remove);
+    container.appendChild(item);
+  }
 }
 
-// Inscreve o painel nos eventos da eleição selecionada
+// --------------------------------------------------
+// VOTOS E RESULTADOS
+// --------------------------------------------------
+
+async function updateVoteCount() {
+  const election = currentElection;
+
+  if (!election) {
+    $("voteCount").textContent = "—";
+    return;
+  }
+
+  const round = Number(election.current_round || 0);
+
+  if (![1, 2, 3].includes(round)) {
+    $("voteCount").textContent = "—";
+    return;
+  }
+
+  try {
+    const result = await api("results", {
+      election_id: election.id,
+      round
+    });
+
+    if (!currentElection || currentElection.id !== election.id) {
+      return;
+    }
+
+    $("voteCount").textContent = result.total_votes;
+
+  } catch (error) {
+    console.warn("Erro ao consultar votos:", error);
+    $("voteCount").textContent = "—";
+  }
+}
+
+async function loadResults(round) {
+  const election = currentElection;
+
+  if (!election) return;
+
+  const result = await api("results", {
+    election_id: election.id,
+    round: Number(round)
+  });
+
+  if (!currentElection || currentElection.id !== election.id) {
+    return;
+  }
+
+  lastResultsRound = Number(round);
+
+  const container = $("results");
+  container.innerHTML = "";
+
+  const heading = document.createElement("p");
+  heading.className = "muted";
+  heading.textContent = `Total de votos: ${result.total_votes}`;
+
+  container.appendChild(heading);
+
+  if (!result.results || !result.results.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty";
+    empty.textContent =
+      "Nenhum voto registrado neste escrutínio.";
+
+    container.appendChild(empty);
+    return;
+  }
+
+  result.results.forEach((item, index) => {
+    const row = document.createElement("div");
+    row.className = "result";
+
+    const name = document.createElement("span");
+    name.textContent = `${index + 1}º — ${item.name}`;
+
+    const votes = document.createElement("strong");
+    votes.textContent = `${item.votes} voto(s)`;
+
+    row.append(name, votes);
+    container.appendChild(row);
+  });
+}
+
+// --------------------------------------------------
+// DETALHES DA ELEIÇÃO
+// --------------------------------------------------
+
+async function loadElectionDetails() {
+  const id = $("electionSelect").value;
+  const version = ++selectionVersion;
+
+  if (!id) {
+    currentElection = null;
+    $("electionArea").classList.add("hidden");
+    await stopRealtimeSubscription();
+    return;
+  }
+
+  const { elections } = await api("admin_list_elections");
+
+  // Descarta respostas de seleções anteriores
+  if (version !== selectionVersion || $("electionSelect").value !== id) {
+    return;
+  }
+
+  const selectedElection = elections.find(e => e.id === id);
+
+  if (!selectedElection) {
+    currentElection = null;
+    $("electionArea").classList.add("hidden");
+    await stopRealtimeSubscription();
+    throw new Error("Eleição não encontrada.");
+  }
+
+  currentElection = selectedElection;
+
+  $("electionArea").classList.remove("hidden");
+
+  renderElectionDetails(currentElection);
+
+  // Primeiro estabelece a conexão; depois carrega os dados
+  await setupRealtimeSubscription();
+
+  if (!currentElection || currentElection.id !== id) return;
+
+  await Promise.all([
+    loadParticipants(),
+    updateVoteCount()
+  ]);
+}
+
+// --------------------------------------------------
+// SUPABASE REALTIME
+// --------------------------------------------------
+
+async function stopRealtimeSubscription() {
+  if (realtimeTimer) {
+    clearTimeout(realtimeTimer);
+    realtimeTimer = null;
+  }
+
+  pendingRealtimeUpdates.clear();
+
+  const oldChannel = realtimeChannel;
+
+  realtimeChannel = null;
+  realtimeElectionId = null;
+
+  if (oldChannel) {
+    await supabase.removeChannel(oldChannel);
+  }
+}
+
+function scheduleRealtimeUpdate(type) {
+  pendingRealtimeUpdates.add(type);
+
+  if (realtimeTimer || processingRealtime) return;
+
+  realtimeTimer = setTimeout(async () => {
+    realtimeTimer = null;
+
+    if (processingRealtime) return;
+
+    processingRealtime = true;
+
+    try {
+      const updates = new Set(pendingRealtimeUpdates);
+      pendingRealtimeUpdates.clear();
+
+      const electionId = realtimeElectionId;
+
+      if (!currentElection || currentElection.id !== electionId) {
+        return;
+      }
+
+      if (updates.has("election")) {
+        const { elections } = await api("admin_list_elections");
+
+        if (!currentElection || currentElection.id !== electionId) {
+          return;
+        }
+
+        const updatedElection =
+          elections.find(e => e.id === electionId);
+
+        if (updatedElection) {
+          currentElection = updatedElection;
+          renderElectionDetails(currentElection);
+
+          await Promise.all([
+            loadParticipants(),
+            updateVoteCount()
+          ]);
+        }
+
+      } else {
+        const tasks = [];
+
+        if (updates.has("participants")) {
+          tasks.push(loadParticipants());
+        }
+
+        if (updates.has("ballots")) {
+          tasks.push(updateVoteCount());
+
+          if (lastResultsRound !== null) {
+            tasks.push(loadResults(lastResultsRound));
+          }
+        }
+
+        await Promise.all(tasks);
+      }
+
+    } catch (error) {
+      console.warn("Erro no Supabase Realtime:", error);
+
+    } finally {
+      processingRealtime = false;
+
+      // Processa eventos que chegaram enquanto a atualização ocorria
+      if (pendingRealtimeUpdates.size) {
+        const nextUpdates = [...pendingRealtimeUpdates];
+        pendingRealtimeUpdates.clear();
+
+        nextUpdates.forEach(scheduleRealtimeUpdate);
+      }
+    }
+
+  }, 250);
+}
+
 async function setupRealtimeSubscription() {
   if (!currentElection) {
     await stopRealtimeSubscription();
     return;
   }
 
-  if (realtimeElectionId === currentElection.id && realtimeChannel) {
+  const electionId = currentElection.id;
+
+  if (realtimeChannel && realtimeElectionId === electionId) {
     return;
   }
 
   await stopRealtimeSubscription();
 
-  const electionId = currentElection.id;
-
-  realtimeChannel = supabase
+  const channel = supabase
     .channel(`vota3-admin-${electionId}`)
 
     .on(
@@ -645,18 +840,7 @@ async function setupRealtimeSubscription() {
     .on(
       "postgres_changes",
       {
-        event: "INSERT",
-        schema: "public",
-        table: "participants",
-        filter: `election_id=eq.${electionId}`
-      },
-      () => scheduleRealtimeUpdate("participants")
-    )
-
-    .on(
-      "postgres_changes",
-      {
-        event: "UPDATE",
+        event: "*",
         schema: "public",
         table: "participants",
         filter: `election_id=eq.${electionId}`
@@ -673,60 +857,64 @@ async function setupRealtimeSubscription() {
         filter: `election_id=eq.${electionId}`
       },
       () => scheduleRealtimeUpdate("ballots")
-    )
+    );
 
-    .subscribe((status) => {
-      console.log("Vota3 Realtime:", status);
-    });
-
+  realtimeChannel = channel;
   realtimeElectionId = electionId;
-}
-// Atualização automática do painel a cada 5 segundos
-async function automaticRefresh() {
-  if (autoRefreshBusy || !isLoggedIn || document.hidden) return;
 
-  autoRefreshBusy = true;
+  channel.subscribe((status, error) => {
+    console.log("Vota3 Realtime:", status);
 
-  try {
-    await loadElections();
-
-    if ($("electionSelect").value) {
-      await loadElectionDetails();
-
-      // Atualiza os resultados se eles já foram consultados
-      const selectedRound = $("results").dataset.round;
-
-      if (selectedRound) {
-        $("resultRound").value = selectedRound;
-        $("resultsBtn").click();
-      }
+    if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+      console.error("Erro de conexão Realtime:", error);
     }
-  } catch (error) {
-    console.warn("Falha na atualização automática:", error);
-  } finally {
-    autoRefreshBusy = false;
+  });
+}
+
+// --------------------------------------------------
+// ATUALIZAÇÃO MANUAL
+// --------------------------------------------------
+
+async function refreshAll() {
+  clearMessage();
+
+  await loadElections();
+
+  if (currentElection) {
+    await loadElectionDetails();
   }
 }
 
+// --------------------------------------------------
+// LOGIN
+// --------------------------------------------------
 
 $("loginBtn").addEventListener("click", async () => {
   try {
     clearMessage();
-    const {data, error} = await supabase.auth.signInWithPassword({
+
+    const { data, error } = await supabase.auth.signInWithPassword({
       email: $("email").value.trim(),
       password: $("password").value
     });
+
     if (error) throw error;
+
     setLoggedIn(data.user);
+
     await loadElections();
+
     showMessage("Acesso realizado com sucesso.", "success");
+
   } catch (error) {
     showMessage(error.message, "error");
   }
 });
 
 $("password").addEventListener("keydown", (event) => {
-  if (event.key === "Enter") $("loginBtn").click();
+  if (event.key === "Enter") {
+    $("loginBtn").click();
+  }
 });
 
 $("logoutBtn").addEventListener("click", async () => {
@@ -735,21 +923,33 @@ $("logoutBtn").addEventListener("click", async () => {
   location.reload();
 });
 
+// --------------------------------------------------
+// CRIAR ELEIÇÃO
+// --------------------------------------------------
+
 $("createElectionBtn").addEventListener("click", async () => {
   try {
     clearMessage();
+
     const name = $("electionName").value.trim();
     const slug = $("electionSlug").value.trim().toLowerCase();
 
-    const result = await api("admin_create_election", {name, slug});
+    const result = await api("admin_create_election", {
+      name,
+      slug
+    });
 
     showMessage("Eleição criada com sucesso!", "success");
+
     $("electionName").value = "";
     $("electionSlug").value = "";
 
     await loadElections();
+
     $("electionSelect").value = result.election.id;
+
     await loadElectionDetails();
+
   } catch (error) {
     showMessage(error.message, "error");
   }
@@ -757,106 +957,133 @@ $("createElectionBtn").addEventListener("click", async () => {
 
 $("electionSlug").addEventListener("input", () => {
   $("electionSlug").value = $("electionSlug").value
-    .toLowerCase().replace(/[^a-z0-9-]/g, "");
+    .toLowerCase()
+    .replace(/[^a-z0-9-]/g, "");
 });
+
+// --------------------------------------------------
+// SELECIONAR ELEIÇÃO
+// --------------------------------------------------
 
 $("electionSelect").addEventListener("change", async () => {
   try {
     clearMessage();
+    lastResultsRound = null;
+    $("results").innerHTML = "";
+
     await loadElectionDetails();
+
   } catch (error) {
     showMessage(error.message, "error");
   }
 });
+
+// --------------------------------------------------
+// BOTÃO ATUALIZAR
+// --------------------------------------------------
 
 $("refreshBtn").addEventListener("click", async () => {
   try {
     await refreshAll();
     showMessage("Dados atualizados.", "success");
+
   } catch (error) {
     showMessage(error.message, "error");
   }
 });
+
+// --------------------------------------------------
+// ABRIR INSCRIÇÕES
+// --------------------------------------------------
 
 $("registrationBtn").addEventListener("click", async () => {
   try {
+    if (!currentElection) return;
+
     await api("admin_open_registration", {
       election_id: currentElection.id
     });
+
     showMessage("Inscrições abertas.", "success");
+
     await refreshAll();
+
   } catch (error) {
     showMessage(error.message, "error");
   }
 });
+
+// --------------------------------------------------
+// INICIAR ESCRUTÍNIO
+// --------------------------------------------------
 
 $("startRoundBtn").addEventListener("click", async () => {
   try {
+    if (!currentElection) return;
+
     const result = await api("admin_start_round", {
       election_id: currentElection.id
     });
-    showMessage(`Escrutínio ${result.round} iniciado.`, "success");
+
+    showMessage(
+      `Escrutínio ${result.round} iniciado.`,
+      "success"
+    );
+
     await refreshAll();
+
   } catch (error) {
     showMessage(error.message, "error");
   }
 });
 
+// --------------------------------------------------
+// ENCERRAR ESCRUTÍNIO
+// --------------------------------------------------
+
 $("closeRoundBtn").addEventListener("click", async () => {
-  if (!confirm("Tem certeza de que deseja encerrar o escrutínio atual?")) return;
+  if (!currentElection) return;
+
+  if (!confirm("Tem certeza de que deseja encerrar o escrutínio atual?")) {
+    return;
+  }
 
   try {
     await api("admin_close_round", {
       election_id: currentElection.id
     });
+
     showMessage("Escrutínio encerrado.", "success");
+
     await refreshAll();
+
   } catch (error) {
     showMessage(error.message, "error");
   }
 });
+
+// --------------------------------------------------
+// CONSULTAR RESULTADOS
+// --------------------------------------------------
 
 $("resultsBtn").addEventListener("click", async () => {
   try {
-    const result = await api("results", {
-      election_id: currentElection.id,
-      round: Number($("resultRound").value)
-    });
+    if (!currentElection) return;
 
-   const container = $("results");
-container.dataset.round = $("resultRound").value;
-container.innerHTML = "";
+    await loadResults(Number($("resultRound").value));
 
-    const heading = document.createElement("p");
-    heading.className = "muted";
-    heading.textContent = `Total de votos: ${result.total_votes}`;
-    container.appendChild(heading);
-
-    if (!result.results.length) {
-      container.innerHTML += '<div class="empty">Nenhum voto registrado neste escrutínio.</div>';
-      return;
-    }
-
-    result.results.forEach((item, index) => {
-      const row = document.createElement("div");
-      row.className = "result";
-
-      const name = document.createElement("span");
-      name.textContent = `${index + 1}º — ${item.name}`;
-
-      const votes = document.createElement("strong");
-      votes.textContent = `${item.votes} voto(s)`;
-
-      row.append(name, votes);
-      container.appendChild(row);
-    });
   } catch (error) {
     showMessage(error.message, "error");
   }
 });
 
+// --------------------------------------------------
+// COPIAR LINKS
+// --------------------------------------------------
+
 $("copyRegistration").addEventListener("click", () => {
   if (!currentElection) return;
+
   copyText(
     `${BASE_URL}/inscricao/?e=${encodeURIComponent(currentElection.slug)}`,
     "Link de inscrição copiado!"
@@ -865,22 +1092,30 @@ $("copyRegistration").addEventListener("click", () => {
 
 $("copyVoting").addEventListener("click", () => {
   if (!currentElection) return;
+
   copyText(
     `${BASE_URL}/votar/?e=${encodeURIComponent(currentElection.slug)}`,
     "Link de votação copiado!"
   );
 });
 
-const {data: initialSession} = await supabase.auth.getSession();
+// --------------------------------------------------
+// INICIALIZAÇÃO
+// --------------------------------------------------
+
+const { data: initialSession } = await supabase.auth.getSession();
 
 if (initialSession.session?.user) {
   setLoggedIn(initialSession.session.user);
+
   try {
     await loadElections();
+
   } catch (error) {
     showMessage(error.message, "error");
   }
 }
+
 </script>
 </body>
 </html>
