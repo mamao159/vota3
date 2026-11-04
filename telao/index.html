@@ -1,7 +1,772 @@
-<!doctype html>
-<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Telão | Vota3</title><link rel="stylesheet" href="../assets/css/style.css"></head>
-<body><main class="shell screen">
-<a class="back" href="../">← Início</a><p class="eyebrow">ACOMPANHAMENTO PÚBLICO</p><h1>Telão <span>Vota3</span></h1>
-<p class="lead">Os resultados serão exibidos aqui quando uma sala estiver em votação.</p>
-<div class="notice">Nenhum resultado público disponível. A conexão ao placar ao vivo será implementada após as funções seguras de votação.</div>
-</main></body></html>
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#080f1e">
+<title>Telão | Vota3</title>
+
+<style>
+*{box-sizing:border-box}
+
+:root{
+  --bg:#080f1e;
+  --panel:#111d31;
+  --panel2:#17263d;
+  --border:#293c59;
+  --text:#f1f5f9;
+  --muted:#94a3b8;
+  --blue:#60a5fa;
+  --green:#34d399;
+  --purple:#a78bfa;
+}
+
+body{
+  margin:0;
+  min-height:100vh;
+  padding:28px;
+  background:
+    radial-gradient(ellipse at 50% -15%,#1d3b68 0%,transparent 55%),
+    var(--bg);
+  color:var(--text);
+  font-family:Arial,Helvetica,sans-serif;
+}
+
+main{
+  max-width:1250px;
+  margin:auto;
+}
+
+.top{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:20px;
+  flex-wrap:wrap;
+  margin-bottom:35px;
+}
+
+.brand{
+  display:flex;
+  align-items:center;
+  gap:14px;
+}
+
+.logo{
+  width:55px;
+  height:55px;
+  display:grid;
+  place-items:center;
+  border-radius:16px;
+  background:linear-gradient(135deg,#2563eb,#7c3aed);
+  font-size:21px;
+  font-weight:900;
+}
+
+.eyebrow{
+  color:var(--blue);
+  font-size:11px;
+  font-weight:bold;
+  letter-spacing:2px;
+  text-transform:uppercase;
+  margin-bottom:8px;
+}
+
+h1{
+  font-size:30px;
+  margin:0;
+  letter-spacing:-1px;
+}
+
+h1 span{color:var(--blue)}
+
+.subtitle{
+  color:var(--muted);
+  font-size:14px;
+  margin:7px 0 0;
+}
+
+.connection{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  color:var(--muted);
+  font-size:12px;
+  background:#111d31;
+  border:1px solid var(--border);
+  padding:11px 15px;
+  border-radius:30px;
+}
+
+.dot{
+  width:9px;
+  height:9px;
+  background:var(--green);
+  border-radius:50%;
+  box-shadow:0 0 12px #34d39988;
+}
+
+.dot.offline{
+  background:#f87171;
+  box-shadow:0 0 12px #f8717188;
+}
+
+.hero{
+  text-align:center;
+  padding:30px 15px 35px;
+}
+
+.hero h2{
+  font-size:clamp(25px,4vw,42px);
+  margin:0 0 12px;
+  letter-spacing:-1px;
+}
+
+.hero p{
+  color:var(--muted);
+  margin:0;
+  font-size:15px;
+}
+
+.status{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:9px 15px;
+  border-radius:30px;
+  background:#1e3a8a;
+  color:#bfdbfe;
+  font-size:12px;
+  font-weight:bold;
+  margin-bottom:18px;
+}
+
+.status.registration{
+  background:#164e3c;
+  color:#a7f3d0;
+}
+
+.status.ready{
+  background:#713f12;
+  color:#fde68a;
+}
+
+.status.finished{
+  background:#4c1d95;
+  color:#ddd6fe;
+}
+
+.status.draft{
+  background:#334155;
+  color:#cbd5e1;
+}
+
+.stats{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:15px;
+  margin:15px 0 30px;
+}
+
+.stat{
+  background:linear-gradient(145deg,#17263d,#101a2c);
+  border:1px solid var(--border);
+  border-radius:17px;
+  padding:23px;
+  text-align:center;
+}
+
+.stat-label{
+  font-size:11px;
+  color:var(--muted);
+  text-transform:uppercase;
+  letter-spacing:1.3px;
+}
+
+.stat-value{
+  font-size:clamp(27px,4vw,40px);
+  font-weight:900;
+  margin-top:10px;
+}
+
+.section{
+  margin:30px 0;
+}
+
+.section-title{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:12px;
+  margin-bottom:17px;
+}
+
+.section-title h2{
+  font-size:20px;
+  margin:0;
+}
+
+.section-title span{
+  color:var(--muted);
+  font-size:12px;
+}
+
+.candidates{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:16px;
+}
+
+.candidate{
+  background:linear-gradient(145deg,#17263d,#101a2c);
+  border:1px solid var(--border);
+  border-radius:17px;
+  padding:22px;
+  min-width:0;
+}
+
+.candidate-top{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:17px;
+}
+
+.candidate-name{
+  font-size:17px;
+  font-weight:bold;
+  overflow-wrap:anywhere;
+}
+
+.candidate-position{
+  color:var(--blue);
+  font-size:12px;
+  font-weight:bold;
+}
+
+.candidate-votes{
+  font-size:29px;
+  font-weight:900;
+  margin-bottom:5px;
+}
+
+.candidate-percent{
+  color:var(--muted);
+  font-size:12px;
+}
+
+.bar{
+  height:10px;
+  border-radius:20px;
+  overflow:hidden;
+  background:#29384e;
+  margin-top:16px;
+}
+
+.bar-fill{
+  height:100%;
+  width:0;
+  border-radius:20px;
+  background:linear-gradient(90deg,#2563eb,#8b5cf6);
+  transition:width .5s ease;
+}
+
+.no-results{
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:17px;
+  padding:45px 20px;
+  text-align:center;
+}
+
+.no-results h2{
+  font-size:21px;
+  margin-bottom:10px;
+}
+
+.no-results p{
+  color:var(--muted);
+  font-size:14px;
+  line-height:1.6;
+  max-width:500px;
+  margin:0 auto;
+}
+
+.footer{
+  border-top:1px solid var(--border);
+  margin-top:45px;
+  padding:20px 0;
+  text-align:center;
+  color:var(--muted);
+  font-size:12px;
+}
+
+.error{
+  color:#fecaca;
+  background:#451e2a;
+  border:1px solid #7f1d1d;
+  padding:16px;
+  border-radius:12px;
+  text-align:center;
+  margin:20px 0;
+}
+
+.updated{
+  text-align:center;
+  color:var(--muted);
+  font-size:11px;
+  margin-top:20px;
+}
+
+.hidden{display:none!important}
+
+@media(max-width:650px){
+  body{padding:16px}
+  .stats{gap:8px}
+  .stat{padding:15px 8px}
+  .stat-label{font-size:9px}
+  .candidates{grid-template-columns:1fr}
+  .hero{padding:25px 5px}
+}
+</style>
+</head>
+
+<body>
+<main>
+
+<header class="top">
+  <div class="brand">
+    <div class="logo">V3</div>
+    <div>
+      <div class="eyebrow">Acompanhamento público</div>
+      <h1>Vota3 <span>Telão</span></h1>
+      <p class="subtitle">Acompanhe a votação em tempo real</p>
+    </div>
+  </div>
+
+  <div class="connection">
+    <span id="connectionDot" class="dot"></span>
+    <span id="connectionText">Conectando...</span>
+  </div>
+</header>
+
+<div id="error" class="error hidden"></div>
+
+<section id="content" class="hidden">
+
+  <div class="hero">
+    <div id="status" class="status">Carregando...</div>
+    <h2 id="electionName">Eleição</h2>
+    <p id="roundDescription">Acompanhamento da votação</p>
+  </div>
+
+  <div id="stats" class="stats hidden">
+    <div class="stat">
+      <div class="stat-label">Escrutínio</div>
+      <div class="stat-value" id="roundNumber">—</div>
+    </div>
+
+    <div class="stat">
+      <div class="stat-label">Votos registrados</div>
+      <div class="stat-value" id="totalVotes">0</div>
+    </div>
+
+    <div class="stat">
+      <div class="stat-label">Candidatos</div>
+      <div class="stat-value" id="candidateCount">0</div>
+    </div>
+  </div>
+
+  <section id="resultsSection" class="section hidden">
+    <div class="section-title">
+      <h2>🏆 Placar da votação</h2>
+      <span id="resultLabel"></span>
+    </div>
+
+    <div id="results" class="candidates"></div>
+  </section>
+
+  <section id="candidatesSection" class="section hidden">
+    <div class="section-title">
+      <h2>Candidatos habilitados</h2>
+      <span id="candidateLabel"></span>
+    </div>
+
+    <div id="candidateList" class="candidates"></div>
+  </section>
+
+  <div id="waiting" class="no-results hidden">
+    <h2 id="waitingTitle">Aguardando votação</h2>
+    <p id="waitingText"></p>
+  </div>
+
+  <div class="updated">
+    Última atualização: <span id="lastUpdate">—</span>
+  </div>
+
+</section>
+
+<footer class="footer">
+  Vota3 · Plataforma de votação
+</footer>
+
+</main>
+
+<script type="module">
+import { SUPABASE_URL, SUPABASE_ANON_KEY }
+  from "../assets/js/config.js";
+
+const $ = (id) => document.getElementById(id);
+
+const params = new URLSearchParams(window.location.search);
+const slug = (params.get("e") || "").trim().toLowerCase();
+
+let lastRenderedData = "";
+let requestRunning = false;
+let stopped = false;
+
+const REFRESH_INTERVAL = 3000;
+
+function setConnection(connected, message) {
+  $("connectionDot").classList.toggle("offline", !connected);
+  $("connectionText").textContent = message;
+}
+
+function showError(message) {
+  $("error").textContent = message;
+  $("error").classList.remove("hidden");
+  $("content").classList.add("hidden");
+}
+
+function hideError() {
+  $("error").classList.add("hidden");
+}
+
+async function api(action, data = {}) {
+  const response = await fetch(
+    `${SUPABASE_URL}/functions/v1/vota3-api`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`
+      },
+      body: JSON.stringify({ action, ...data })
+    }
+  );
+
+  const result = await response.json();
+
+  if (!response.ok || result.error) {
+    throw new Error(result.error || "Erro ao consultar a eleição.");
+  }
+
+  return result;
+}
+
+function statusInfo(status, round) {
+  if (status === "draft") {
+    return {
+      label: "Em preparação",
+      description: "Esta eleição ainda está sendo preparada.",
+      type: "draft"
+    };
+  }
+
+  if (status === "registration") {
+    return {
+      label: "Inscrições abertas",
+      description: "Os participantes estão sendo cadastrados.",
+      type: "registration"
+    };
+  }
+
+  if (status === "ready") {
+    return {
+      label: "Entre escrutínios",
+      description: "O escrutínio foi encerrado. Aguardando a próxima etapa.",
+      type: "ready"
+    };
+  }
+
+  if (status === "finished") {
+    return {
+      label: "Eleição finalizada",
+      description: "Resultado final da eleição.",
+      type: "finished"
+    };
+  }
+
+  if (["round_1", "round_2", "round_3"].includes(status)) {
+    return {
+      label: "Votação em andamento",
+      description: `A votação do ${round}º escrutínio está aberta.`,
+      type: ""
+    };
+  }
+
+  return {
+    label: status,
+    description: "Acompanhamento da eleição.",
+    type: "draft"
+  };
+}
+
+function createCandidateCard(candidate, index, totalVotes) {
+  const card = document.createElement("article");
+  card.className = "candidate";
+
+  const top = document.createElement("div");
+  top.className = "candidate-top";
+
+  const name = document.createElement("div");
+  name.className = "candidate-name";
+  name.textContent = candidate.name;
+
+  const position = document.createElement("div");
+  position.className = "candidate-position";
+  position.textContent = `${index + 1}º LUGAR`;
+
+  top.append(name, position);
+
+  const votes = document.createElement("div");
+  votes.className = "candidate-votes";
+  votes.textContent = `${candidate.votes}`;
+
+  const percent = totalVotes > 0
+    ? (candidate.votes / totalVotes) * 100
+    : 0;
+
+  const percentLabel = document.createElement("div");
+  percentLabel.className = "candidate-percent";
+  percentLabel.textContent = `${percent.toFixed(1).replace(".", ",")}% dos votos`;
+
+  const bar = document.createElement("div");
+  bar.className = "bar";
+
+  const fill = document.createElement("div");
+  fill.className = "bar-fill";
+  fill.style.width = `${percent}%`;
+
+  bar.appendChild(fill);
+
+  card.append(top, votes, percentLabel, bar);
+
+  return card;
+}
+
+function renderResults(result) {
+  const container = $("results");
+  container.innerHTML = "";
+
+  const ranking = result.results || [];
+
+  $("totalVotes").textContent = result.total_votes ?? 0;
+  $("candidateCount").textContent = ranking.length;
+  $("roundNumber").textContent = `${result.round}º`;
+  $("resultLabel").textContent = `Resultado do ${result.round}º escrutínio`;
+
+  ranking.forEach((candidate, index) => {
+    container.appendChild(
+      createCandidateCard(candidate, index, result.total_votes || 0)
+    );
+  });
+
+  $("stats").classList.remove("hidden");
+  $("resultsSection").classList.remove("hidden");
+  $("candidatesSection").classList.add("hidden");
+  $("waiting").classList.add("hidden");
+}
+
+function renderCandidates(candidates) {
+  const container = $("candidateList");
+  container.innerHTML = "";
+
+  $("candidateCount").textContent = candidates.length;
+  $("candidateLabel").textContent =
+    `${candidates.length} candidato(s)`;
+
+  candidates.forEach((candidate, index) => {
+    const card = document.createElement("article");
+    card.className = "candidate";
+
+    const top = document.createElement("div");
+    top.className = "candidate-top";
+
+    const name = document.createElement("div");
+    name.className = "candidate-name";
+    name.textContent = candidate.name;
+
+    const position = document.createElement("div");
+    position.className = "candidate-position";
+    position.textContent = `CANDIDATO ${index + 1}`;
+
+    top.append(name, position);
+    card.appendChild(top);
+
+    container.appendChild(card);
+  });
+
+  $("stats").classList.add("hidden");
+  $("resultsSection").classList.add("hidden");
+  $("candidatesSection").classList.remove("hidden");
+  $("waiting").classList.add("hidden");
+}
+
+function renderWaiting(title, description) {
+  $("stats").classList.add("hidden");
+  $("resultsSection").classList.add("hidden");
+  $("candidatesSection").classList.add("hidden");
+  $("waiting").classList.remove("hidden");
+
+  $("waitingTitle").textContent = title;
+  $("waitingText").textContent = description;
+}
+
+async function refresh() {
+  if (requestRunning || document.hidden || stopped) return;
+
+  requestRunning = true;
+
+  try {
+    const publicData = await api("public_election", {
+      slug
+    });
+
+    const election = publicData.election;
+    const candidates = publicData.candidates || [];
+
+    let result = null;
+
+    const hasRound =
+      [1, 2, 3].includes(Number(election.current_round));
+
+    const showResults =
+      hasRound &&
+      (
+        election.status === `round_${election.current_round}` ||
+        election.status === "ready" ||
+        election.status === "finished"
+      );
+
+    if (showResults) {
+      result = await api("results", {
+        slug,
+        round: Number(election.current_round)
+      });
+    }
+
+    const data = {
+      election,
+      candidates,
+      result
+    };
+
+    const serialized = JSON.stringify(data);
+
+    // Só redesenha a tela se os dados realmente mudaram.
+    if (serialized !== lastRenderedData) {
+      lastRenderedData = serialized;
+
+      const info = statusInfo(
+        election.status,
+        election.current_round
+      );
+
+      $("status").textContent = info.label;
+      $("status").className = `status ${info.type}`;
+
+      $("electionName").textContent = election.name;
+      $("roundDescription").textContent = info.description;
+
+      if (result) {
+        renderResults(result);
+
+      } else if (election.status === "registration") {
+        renderCandidates(candidates);
+
+      } else if (election.status === "draft") {
+        renderWaiting(
+          "Eleição em preparação",
+          "O administrador ainda não iniciou as inscrições."
+        );
+
+      } else {
+        renderWaiting(
+          "Aguardando próximo escrutínio",
+          "O resultado da etapa anterior já foi apurado. Aguarde o início da próxima votação."
+        );
+      }
+    }
+
+    $("content").classList.remove("hidden");
+    hideError();
+
+    $("lastUpdate").textContent =
+      new Date().toLocaleTimeString("pt-BR");
+
+    setConnection(true, "Conectado");
+
+  } catch (error) {
+    console.error("Erro no telão:", error);
+
+    setConnection(false, "Reconectando");
+
+    if (!$("content").classList.contains("hidden")) {
+      $("lastUpdate").textContent =
+        "Falha na atualização. Tentando novamente...";
+    } else {
+      showError(error.message);
+    }
+
+  } finally {
+    requestRunning = false;
+  }
+}
+
+function scheduleNextRefresh() {
+  if (stopped) return;
+
+  setTimeout(async () => {
+    if (stopped) return;
+
+    if (!document.hidden) {
+      await refresh();
+    }
+
+    scheduleNextRefresh();
+
+  }, REFRESH_INTERVAL);
+}
+
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) {
+    refresh();
+  }
+});
+
+// --------------------------------------------------
+// INICIALIZAÇÃO
+// --------------------------------------------------
+
+if (!slug) {
+  showError(
+    "Eleição não informada. Acesse o telão utilizando o link disponibilizado pelo administrador."
+  );
+
+} else {
+  refresh();
+  scheduleNextRefresh();
+}
+
+window.addEventListener("beforeunload", () => {
+  stopped = true;
+});
+
+</script>
+</body>
+</html>
