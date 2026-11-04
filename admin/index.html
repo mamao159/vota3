@@ -1,8 +1,411 @@
-<!doctype html>
-<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Administrador | Vota3</title><link rel="stylesheet" href="../assets/css/style.css"></head>
-<body><main class="shell">
-<a class="back" href="../">← Início</a><p class="eyebrow">AMBIENTE RESTRITO</p><h1>Painel do <span>administrador</span></h1>
-<p class="lead">Aqui ficará o controle das eleições, inscrições, participantes e três escrutínios.</p>
-<div class="notice"><strong>Etapa 1 concluída:</strong> estrutura do painel criada. A autenticação administrativa será configurada na próxima etapa.</div>
-<div class="panel"><label for="project-status">Conexão do projeto</label><p id="project-status">Verificando configuração…</p></div>
-</main><script type="module" src="../assets/js/status.js"></script></body></html>
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vota3 | Administração</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 24px; background: #f3f5f9;
+      color: #202938; font-family: Arial, sans-serif;
+    }
+    main { max-width: 1000px; margin: auto; }
+    h1 { margin-bottom: 5px; }
+    h2 { font-size: 19px; }
+    .muted { color: #657184; font-size: 14px; }
+    .card {
+      background: white; padding: 22px; margin: 18px 0;
+      border-radius: 12px; box-shadow: 0 2px 10px #0000000b;
+    }
+    input, select {
+      width: 100%; padding: 12px; margin: 7px 0 12px;
+      border: 1px solid #ccd3df; border-radius: 7px;
+      font-size: 15px;
+    }
+    button {
+      border: 0; border-radius: 7px; padding: 11px 16px;
+      background: #2457d6; color: white; cursor: pointer;
+      margin: 4px 4px 4px 0; font-weight: bold;
+    }
+    button.secondary { background: #566477; }
+    button.danger { background: #b83232; }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+    .hidden { display: none; }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; }
+    .row > * { flex: 1; min-width: 180px; }
+    .participant {
+      border: 1px solid #e1e5ec; border-radius: 8px;
+      padding: 13px; margin: 9px 0;
+    }
+    .status { font-size: 13px; color: #657184; }
+    .message {
+      padding: 12px; border-radius: 7px; margin: 12px 0;
+      background: #eaf0ff; white-space: pre-wrap; overflow-wrap: anywhere;
+    }
+    .error { background: #ffeded; color: #9d2525; }
+    .success { background: #e9f8ed; color: #176b35; }
+    .result { padding: 10px; border-bottom: 1px solid #e5e8ef; }
+    @media(max-width:600px) { body { padding: 12px; } .card { padding: 16px; } }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Vota3 — Administração</h1>
+  <p class="muted">Painel de controle das eleições e dos três escrutínios.</p>
+
+  <div id="message" class="message hidden"></div>
+
+  <section id="login" class="card">
+    <h2>Acesso do administrador</h2>
+    <label>E-mail</label>
+    <input id="email" type="email" autocomplete="username" placeholder="Seu e-mail">
+    <label>Senha</label>
+    <input id="password" type="password" autocomplete="current-password" placeholder="Sua senha">
+    <button id="loginBtn">Entrar</button>
+  </section>
+
+  <section id="application" class="hidden">
+    <div class="card">
+      <div class="row">
+        <div>
+          <h2>Minha conta</h2>
+          <div id="userEmail" class="muted"></div>
+        </div>
+        <div style="text-align:right">
+          <button id="logoutBtn" class="secondary">Sair</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Criar eleição</h2>
+      <label>Nome da eleição</label>
+      <input id="electionName" placeholder="Ex.: Eleição da Diretoria 2026">
+      <label>Identificador da eleição (sem espaços)</label>
+      <input id="electionSlug" placeholder="Ex.: diretoria-2026">
+      <button id="createElectionBtn">Criar eleição</button>
+    </div>
+
+    <div class="card">
+      <h2>Selecionar eleição</h2>
+      <select id="electionSelect">
+        <option value="">Carregando eleições...</option>
+      </select>
+      <button id="refreshBtn" class="secondary">Atualizar dados</button>
+      <div id="electionInfo" class="muted"></div>
+    </div>
+
+    <div id="electionArea" class="hidden">
+      <div class="card">
+        <h2>Controle da eleição</h2>
+        <p id="roundInfo" class="muted"></p>
+        <button id="registrationBtn">Abrir inscrições</button>
+        <button id="startRoundBtn">Iniciar próximo escrutínio</button>
+        <button id="closeRoundBtn" class="danger">Encerrar escrutínio atual</button>
+      </div>
+
+      <div class="card">
+        <h2>Participantes</h2>
+        <p class="muted">Aprove os inscritos para liberar a participação na eleição.</p>
+        <div id="participants">Selecione uma eleição.</div>
+      </div>
+
+      <div class="card">
+        <h2>Resultados</h2>
+        <p class="muted">Os resultados exibidos são totais, sem identificação dos eleitores.</p>
+        <select id="resultRound">
+          <option value="1">Primeiro escrutínio</option>
+          <option value="2">Segundo escrutínio</option>
+          <option value="3">Terceiro escrutínio</option>
+        </select>
+        <button id="resultsBtn">Consultar resultado</button>
+        <div id="results"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script type="module">
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../assets/js/config.js";
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const $ = (id) => document.getElementById(id);
+
+let currentElection = null;
+
+function showMessage(message, type = "") {
+  const el = $("message");
+  el.textContent = message;
+  el.className = "message " + type;
+  el.classList.remove("hidden");
+}
+
+function clearMessage() {
+  $("message").classList.add("hidden");
+}
+
+async function api(action, data = {}) {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const token = sessionData.session?.access_token;
+
+  const response = await fetch(`${SUPABASE_URL}/functions/v1/vota3-api`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "apikey": SUPABASE_ANON_KEY,
+      ...(token ? { "Authorization": `Bearer ${token}` } : {})
+    },
+    body: JSON.stringify({ action, ...data })
+  });
+
+  const result = await response.json();
+  if (!response.ok || result.error) {
+    throw new Error(result.error || "Não foi possível concluir a operação.");
+  }
+  return result;
+}
+
+function setLoggedIn(user) {
+  $("login").classList.add("hidden");
+  $("application").classList.remove("hidden");
+  $("userEmail").textContent = user.email || "";
+}
+
+async function loadElections() {
+  const result = await api("admin_list_elections");
+  const select = $("electionSelect");
+  select.innerHTML = '<option value="">Selecione uma eleição</option>';
+
+  for (const election of result.elections) {
+    const option = document.createElement("option");
+    option.value = election.id;
+    option.textContent = election.name + " — " + election.status;
+    select.appendChild(option);
+  }
+
+  if (currentElection && result.elections.some(e => e.id === currentElection.id)) {
+    select.value = currentElection.id;
+  } else {
+    currentElection = null;
+    $("electionArea").classList.add("hidden");
+  }
+}
+
+async function loadParticipants() {
+  if (!currentElection) return;
+  const result = await api("admin_list_participants", {
+    election_id: currentElection.id
+  });
+
+  const container = $("participants");
+  container.innerHTML = "";
+
+  if (!result.participants.length) {
+    container.textContent = "Ainda não há participantes inscritos.";
+    return;
+  }
+
+  for (const participant of result.participants) {
+    const item = document.createElement("div");
+    item.className = "participant";
+
+    const name = document.createElement("strong");
+    name.textContent = participant.full_name;
+
+    const details = document.createElement("div");
+    details.className = "status";
+    details.textContent =
+      `Nascimento: ${participant.birth_date} | Situação: ${participant.status}`;
+
+    item.append(name, details);
+
+    if (participant.status === "pending") {
+      const approve = document.createElement("button");
+      approve.textContent = "Aprovar participante";
+      approve.addEventListener("click", async () => {
+        try {
+          approve.disabled = true;
+          const result = await api("admin_approve_participant", {
+            election_id: currentElection.id,
+            participant_id: participant.id
+          });
+          showMessage(
+            `Participante aprovado!\n\nCredencial individual:\n${result.credential}\n\nCopie e entregue ao participante. Ela não será exibida novamente.`,
+            "success"
+          );
+          await loadParticipants();
+        } catch (error) {
+          showMessage(error.message, "error");
+          approve.disabled = false;
+        }
+      });
+      item.appendChild(approve);
+    }
+
+    container.appendChild(item);
+  }
+}
+
+async function loadElectionDetails() {
+  const id = $("electionSelect").value;
+  currentElection = null;
+  $("electionArea").classList.add("hidden");
+  if (!id) return;
+
+  const { elections } = await api("admin_list_elections");
+  currentElection = elections.find(e => e.id === id);
+  if (!currentElection) throw new Error("Eleição não encontrada.");
+
+  $("electionArea").classList.remove("hidden");
+  $("electionInfo").textContent =
+    `Situação: ${currentElection.status} | Escrutínio atual: ${currentElection.current_round}`;
+
+  $("roundInfo").textContent =
+    `Situação: ${currentElection.status}. Escrutínio atual: ${currentElection.current_round || "Nenhum"}.`;
+
+  $("registrationBtn").disabled = currentElection.status !== "draft";
+  $("startRoundBtn").disabled =
+    !["registration", "ready"].includes(currentElection.status) ||
+    currentElection.current_round >= 3;
+  $("closeRoundBtn").disabled =
+    !["round_1", "round_2", "round_3"].includes(currentElection.status);
+
+  await loadParticipants();
+}
+
+async function refreshAll() {
+  clearMessage();
+  await loadElections();
+  if (currentElection) await loadElectionDetails();
+}
+
+$("loginBtn").addEventListener("click", async () => {
+  try {
+    clearMessage();
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: $("email").value.trim(),
+      password: $("password").value
+    });
+    if (error) throw error;
+    setLoggedIn(data.user);
+    await loadElections();
+    showMessage("Acesso realizado com sucesso.", "success");
+  } catch (error) {
+    showMessage(error.message, "error");
+  }
+});
+
+$("logoutBtn").addEventListener("click", async () => {
+  await supabase.auth.signOut();
+  location.reload();
+});
+
+$("createElectionBtn").addEventListener("click", async () => {
+  try {
+    clearMessage();
+    const name = $("electionName").value.trim();
+    const slug = $("electionSlug").value.trim().toLowerCase();
+    const result = await api("admin_create_election", { name, slug });
+    showMessage("Eleição criada com sucesso!", "success");
+    await loadElections();
+    $("electionSelect").value = result.election.id;
+    await loadElectionDetails();
+  } catch (error) {
+    showMessage(error.message, "error");
+  }
+});
+
+$("electionSelect").addEventListener("change", async () => {
+  try {
+    clearMessage();
+    await loadElectionDetails();
+  } catch (error) {
+    showMessage(error.message, "error");
+  }
+});
+
+$("refreshBtn").addEventListener("click", async () => {
+  try {
+    await refreshAll();
+    showMessage("Dados atualizados.", "success");
+  } catch (error) {
+    showMessage(error.message, "error");
+  }
+});
+
+$("registrationBtn").addEventListener("click", async () => {
+  try {
+    await api("admin_open_registration", {
+      election_id: currentElection.id
+    });
+    showMessage("Inscrições abertas.", "success");
+    await refreshAll();
+  } catch (error) {
+    showMessage(error.message, "error");
+  }
+});
+
+$("startRoundBtn").addEventListener("click", async () => {
+  try {
+    const result = await api("admin_start_round", {
+      election_id: currentElection.id
+    });
+    showMessage(`Escrutínio ${result.round} iniciado.`, "success");
+    await refreshAll();
+  } catch (error) {
+    showMessage(error.message, "error");
+  }
+});
+
+$("closeRoundBtn").addEventListener("click", async () => {
+  if (!confirm("Tem certeza de que deseja encerrar o escrutínio atual?")) return;
+  try {
+    await api("admin_close_round", {
+      election_id: currentElection.id
+    });
+    showMessage("Escrutínio encerrado.", "success");
+    await refreshAll();
+  } catch (error) {
+    showMessage(error.message, "error");
+  }
+});
+
+$("resultsBtn").addEventListener("click", async () => {
+  try {
+    const result = await api("results", {
+      election_id: currentElection.id,
+      round: Number($("resultRound").value)
+    });
+    const container = $("results");
+    container.innerHTML = "";
+
+    const heading = document.createElement("p");
+    heading.textContent = `Total de votos: ${result.total_votes}`;
+    container.appendChild(heading);
+
+    result.results.forEach((item, index) => {
+      const row = document.createElement("div");
+      row.className = "result";
+      row.textContent = `${index + 1}º — ${item.name}: ${item.votes} voto(s)`;
+      container.appendChild(row);
+    });
+  } catch (error) {
+    showMessage(error.message, "error");
+  }
+});
+
+const { data: initialSession } = await supabase.auth.getSession();
+if (initialSession.session?.user) {
+  setLoggedIn(initialSession.session.user);
+  try {
+    await loadElections();
+  } catch (error) {
+    showMessage(error.message, "error");
+  }
+}
+</script>
+</body>
+</html>
