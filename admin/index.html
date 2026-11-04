@@ -550,11 +550,35 @@ async function loadElectionDetails() {
   await updateVoteCount();
 }
 
-async function refreshAll() {
-  clearMessage();
-  await loadElections();
-  if (currentElection) await loadElectionDetails();
+// Atualização automática do painel a cada 5 segundos
+async function automaticRefresh() {
+  if (autoRefreshBusy || !isLoggedIn || document.hidden) return;
+
+  autoRefreshBusy = true;
+
+  try {
+    await loadElections();
+
+    if ($("electionSelect").value) {
+      await loadElectionDetails();
+
+      // Atualiza os resultados se eles já foram consultados
+      const selectedRound = $("results").dataset.round;
+
+      if (selectedRound) {
+        $("resultRound").value = selectedRound;
+        $("resultsBtn").click();
+      }
+    }
+  } catch (error) {
+    console.warn("Falha na atualização automática:", error);
+  } finally {
+    autoRefreshBusy = false;
+  }
 }
+
+// Executa a atualização a cada 5 segundos
+setInterval(automaticRefresh, 5000);
 
 $("loginBtn").addEventListener("click", async () => {
   try {
